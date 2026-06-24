@@ -2,18 +2,31 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/dotnet
 {
   "name": "Radarr",
-  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.cache/radarr-devcontainer/ssh-agent.sock,target=/tmp/ssh-agent.sock,type=bind",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind"
+  ],
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_NOLOGO": "1",
+    "NUGET_XMLDOC_MODE": "skip"
+  },
+  "initializeCommand": "bash ${localWorkspaceFolder}/.devcontainer/initializeCommand.sh",
+  "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/postCreateCommand.sh ${containerWorkspaceFolder}",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:2": {
       "nodeGypDependencies": true,
-      "version": "20",
-      "nvmVersion": "latest"
+      "version": "20.11.1"
     }
   },
   "forwardPorts": [7878],
-  "customizations": {
-    "vscode": {
-      "extensions": ["esbenp.prettier-vscode"]
+  "portsAttributes": {
+    "7878": {
+      "label": "Radarr"
     }
   }
 }
