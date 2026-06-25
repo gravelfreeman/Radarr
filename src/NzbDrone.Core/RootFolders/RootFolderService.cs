@@ -8,7 +8,6 @@ using NzbDrone.Common;
 using NzbDrone.Common.Cache;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
-using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Organizer;
 
@@ -29,7 +28,6 @@ namespace NzbDrone.Core.RootFolders
         private readonly IRootFolderRepository _rootFolderRepository;
         private readonly IDiskProvider _diskProvider;
         private readonly IMovieRepository _movieRepository;
-        private readonly IConfigService _configService;
         private readonly INamingConfigService _namingConfigService;
         private readonly Logger _logger;
 
@@ -37,6 +35,7 @@ namespace NzbDrone.Core.RootFolders
 
         private static readonly HashSet<string> SpecialFolders = new HashSet<string>
                                                                  {
+                                                                     ".bin",
                                                                      "$recycle.bin",
                                                                      "system volume information",
                                                                      "recycler",
@@ -51,7 +50,6 @@ namespace NzbDrone.Core.RootFolders
         public RootFolderService(IRootFolderRepository rootFolderRepository,
                                  IDiskProvider diskProvider,
                                  IMovieRepository movieRepository,
-                                 IConfigService configService,
                                  INamingConfigService namingConfigService,
                                  ICacheManager cacheManager,
                                  Logger logger)
@@ -59,7 +57,6 @@ namespace NzbDrone.Core.RootFolders
             _rootFolderRepository = rootFolderRepository;
             _diskProvider = diskProvider;
             _movieRepository = movieRepository;
-            _configService = configService;
             _namingConfigService = namingConfigService;
             _logger = logger;
 
@@ -170,23 +167,18 @@ namespace NzbDrone.Core.RootFolders
 
             var unmappedFolders = possibleMovieFolders.Except(moviePaths.Select(s => s.Value), PathEqualityComparer.Instance).ToList();
 
-            var recycleBinPath = _configService.RecycleBin;
-
             foreach (var unmappedFolder in unmappedFolders)
             {
                 var di = new DirectoryInfo(unmappedFolder.Normalize());
 
                 if ((!di.Attributes.HasFlag(FileAttributes.System) && !di.Attributes.HasFlag(FileAttributes.Hidden)) || di.Attributes.ToString() == "-1")
                 {
-                    if (string.IsNullOrWhiteSpace(recycleBinPath) || di.FullName.PathNotEquals(recycleBinPath))
+                    results.Add(new UnmappedFolder
                     {
-                        results.Add(new UnmappedFolder
-                        {
-                            Name = di.Name,
-                            Path = di.FullName,
-                            RelativePath = path.GetRelativePath(di.FullName)
-                        });
-                    }
+                        Name = di.Name,
+                        Path = di.FullName,
+                        RelativePath = path.GetRelativePath(di.FullName)
+                    });
                 }
             }
 

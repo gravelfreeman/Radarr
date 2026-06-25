@@ -1,90 +1,108 @@
-# Radarr
+# Radarr fork - recycle bin par root folder
 
-[![Build Status](https://dev.azure.com/Radarr/Radarr/_apis/build/status/Radarr.Radarr?branchName=develop)](https://dev.azure.com/Radarr/Radarr/_build/latest?definitionId=1&branchName=develop)
-[![Translation status](https://translate.servarr.com/widget/servarr/radarr/svg-badge.svg)](https://translate.servarr.com/engage/servarr/?utm_source=widget)
-[![Docker Pulls](https://img.shields.io/docker/pulls/linuxserver/radarr.svg)](https://wiki.servarr.com/radarr/installation/docker)
-![Github Downloads](https://img.shields.io/github/downloads/Radarr/Radarr/total.svg)
-[![Backers on Open Collective](https://opencollective.com/Radarr/backers/badge.svg)](#backers)
-[![Sponsors on Open Collective](https://opencollective.com/Radarr/sponsors/badge.svg)](#sponsors)
-[![Mega Sponsors on Open Collective](https://opencollective.com/Radarr/megasponsors/badge.svg)](#mega-sponsors)
+Ce fork existe pour modifier le comportement de la recycle bin de Radarr.
 
-Radarr is a movie collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new movies and will interface with clients and indexers to grab, sort, and rename them. It can also be configured to automatically upgrade the quality of existing files in the library when a better quality format becomes available.
-Note that only one type of a given movie is supported. If you want both a 4k version and 1080p version of a given movie you will need multiple instances.
+Objectif du fork :
 
-## Major Features Include
+- supprimer le path global configurable de recycle bin
+- garder un simple booléen d'activation
+- quand la recycle bin est activée, déplacer les fichiers supprimés dans `.bin` au niveau du root folder concerné
+- éviter qu'une suppression dans une library impacte une autre library
 
-* Adding new movies with lots of information, such as trailers, ratings, etc.
-* Support for major platforms: Windows, Linux, macOS, Raspberry Pi, etc.
-* Can watch for better quality of the movies you have and do an automatic upgrade. _eg. from DVD to Blu-Ray_
-* Automatic failed download handling will try another release if one fails
-* Manual search so you can pick any release or to see why a release was not downloaded automatically
-* Full integration with SABnzbd and NZBGet
-* Automatically searching for releases as well as RSS Sync
-* Automatically importing downloaded movies
-* Recognizing Special Editions, Director's Cut, etc.
-* Identifying releases with hardcoded subs
-* Identifying releases with AKA movie names
-* SABnzbd, NZBGet, QBittorrent, Deluge, rTorrent, Transmission, uTorrent, and other download clients are supported and integrated
-* Full integration with Kodi and Plex (notifications, library updates)
-* Importing Metadata such as trailers or subtitles
-* Adding metadata such as posters and information for Kodi and others to use
-* Advanced customization for profiles, such that Radarr will always download the copy you want
-* A beautiful UI
+Exemple :
 
-## Support
+- root folders Radarr :
+  - `/media/movies/lib1`
+  - `/media/movies/lib2`
+  - `/media/movies/lib3`
+- si un film est supprimé depuis `/media/movies/lib2/...`
+- alors il est déplacé vers `/media/movies/lib2/.bin/...`
 
-[![Wiki](https://img.shields.io/badge/servarr-wiki-181717.svg?maxAge=60)](https://wiki.servarr.com/radarr)
-[![Discord](https://img.shields.io/badge/discord-chat-7289DA.svg?maxAge=60)](https://radarr.video/discord)
+Le comportement ne dépend pas du mount Docker/Kubernetes en lui-même. Il dépend du root folder Radarr retenu pour le fichier concerné.
 
-Note: GitHub Issues are for Bugs and Feature Requests Only
+## Résumé du changement
 
-[![GitHub - Bugs and Feature Requests Only](https://img.shields.io/badge/github-issues-red.svg?maxAge=60)](https://github.com/Radarr/Radarr/issues)
+Avant :
 
-## Contributors & Developers
+- `RecycleBin` était un path global configuré dans les settings
 
-[API Documentation](https://radarr.video/docs/api/)
+Après :
 
-This project exists thanks to all the people who contribute.
-- [Contribute (GitHub)](CONTRIBUTING.md)
-- [Contribution (Wiki Article)](https://wiki.servarr.com/radarr/contributing)
+- `RecycleBinEnabled` active ou désactive la fonctionnalité
+- la destination est calculée automatiquement à partir du root folder du fichier
+- la destination finale est `<root-folder>/.bin`
 
-[![Contributors List](https://opencollective.com/Radarr/contributors.svg?width=890&button=false)](https://github.com/Radarr/Radarr/graphs/contributors)
+## Build
 
-## Backers
+Backend :
 
-Thank you to all our backers! 🙏 [Become a backer](https://opencollective.com/Radarr#backer)
+```bash
+dotnet build src/Radarr.sln -c Debug --no-restore
+```
 
-[![Backers List](https://opencollective.com/Radarr/backers.svg?width=890)](https://opencollective.com/Radarr#backer)
+Frontend :
 
-## Sponsors
+```bash
+yarn build
+```
 
-Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a sponsor](https://opencollective.com/Radarr#sponsor)
+## Tests
 
-[![Sponsors List](https://opencollective.com/Radarr/sponsors.svg?width=890)](https://opencollective.com/Radarr#sponsor)
+Tests ciblés du patch recycle bin :
 
-## Mega Sponsors
+```bash
+dotnet test src/NzbDrone.Core.Test/Radarr.Core.Test.csproj -c Debug --filter "FullyQualifiedName~RecycleBinProviderTests|FullyQualifiedName~RootFolderServiceFixture"
+```
 
-[![Mega Sponsors List](https://opencollective.com/Radarr/tiers/mega-sponsor.svg?width=890)](https://opencollective.com/Radarr#mega-sponsor)
+Smoke test filesystem réel :
 
-## JetBrains
+```bash
+dotnet test src/NzbDrone.Core.Test/Radarr.Core.Test.csproj -c Debug --filter "FullyQualifiedName~RecycleBinFilesystemSmokeFixture"
+```
 
-Thank you to [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.png" alt="JetBrains" width="96">](http://www.jetbrains.com/) for providing us with free licenses to their great tools.
+Ce smoke test crée une library temporaire, un faux fichier vidéo, puis vérifie :
 
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/ReSharper_icon.png" alt="ReSharper" width="32"> ReSharper](http://www.jetbrains.com/resharper/)
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/WebStorm_icon.png" alt="WebStorm" width="32"> WebStorm](http://www.jetbrains.com/webstorm/)
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/Rider_icon.png" alt="Rider" width="32"> Rider](http://www.jetbrains.com/rider/)
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/dotTrace_icon.png" alt="dotTrace" width="32"> dotTrace](http://www.jetbrains.com/dottrace/)
+- une suppression simple
+- un upgrade de fichier
+- le déplacement réel vers `.bin`
 
-## DigitalOcean
+## Exécution locale
 
-This project is also supported by DigitalOcean
-<p>
-  <a href="https://www.digitalocean.com/">
-    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px">
-  </a>
-</p>
+Lancer Radarr localement :
 
-### License
+```bash
+./_output/net8.0/Radarr --nobrowser
+```
 
-* [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
-* Copyright 2010-2025
+Port par défaut :
+
+- `7878`
+
+## Fichiers modifiés
+
+| Fichier | Raison |
+|---|---|
+| [frontend/src/Settings/MediaManagement/MediaManagement.tsx](/workspaces/Radarr/frontend/src/Settings/MediaManagement/MediaManagement.tsx) | Remplacer le champ path de recycle bin par un simple toggle enable/disable |
+| [frontend/src/typings/Settings/MediaManagement.ts](/workspaces/Radarr/frontend/src/typings/Settings/MediaManagement.ts) | Aligner le type frontend avec `RecycleBinEnabled` |
+| [src/NzbDrone.Core/Configuration/IConfigService.cs](/workspaces/Radarr/src/NzbDrone.Core/Configuration/IConfigService.cs) | Remplacer `RecycleBin` par `RecycleBinEnabled` dans le contrat de config |
+| [src/NzbDrone.Core/Configuration/ConfigService.cs](/workspaces/Radarr/src/NzbDrone.Core/Configuration/ConfigService.cs) | Implémenter la nouvelle config booléenne |
+| [src/Radarr.Api.V3/Config/MediaManagementConfigResource.cs](/workspaces/Radarr/src/Radarr.Api.V3/Config/MediaManagementConfigResource.cs) | Exposer la nouvelle config côté API |
+| [src/Radarr.Api.V3/Config/MediaManagementConfigController.cs](/workspaces/Radarr/src/Radarr.Api.V3/Config/MediaManagementConfigController.cs) | Retirer la validation du path global de recycle bin |
+| [src/Radarr.Api.V3/openapi.json](/workspaces/Radarr/src/Radarr.Api.V3/openapi.json) | Mettre à jour le schéma OpenAPI embarqué |
+| [src/NzbDrone.Core/MediaFiles/RecycleBinProvider.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinProvider.cs) | Calculer automatiquement `.bin` à partir du root folder, gérer delete/empty/cleanup |
+| [src/NzbDrone.Core/RootFolders/RootFolderService.cs](/workspaces/Radarr/src/NzbDrone.Core/RootFolders/RootFolderService.cs) | Exclure `.bin` des unmapped folders |
+| [src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs](/workspaces/Radarr/src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs) | Bloquer les paths pointant vers `.bin` ou un sous-dossier de `.bin` |
+| [src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs](/workspaces/Radarr/src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs) | Vérifier la possibilité d'écrire dans `.bin` pour les root folders connus |
+| [src/NzbDrone.Core/Localization/Core/en.json](/workspaces/Radarr/src/NzbDrone.Core/Localization/Core/en.json) | Mettre à jour le help text utilisateur |
+| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteFileFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteFileFixture.cs) | Adapter les tests unitaires de suppression de fichier |
+| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteDirectoryFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteDirectoryFixture.cs) | Adapter les tests unitaires de suppression de dossier |
+| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/EmptyFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/EmptyFixture.cs) | Adapter les tests d'empty multi-root |
+| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/CleanupFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/CleanupFixture.cs) | Adapter les tests de cleanup multi-root |
+| [src/NzbDrone.Core.Test/RootFolderTests/RootFolderServiceFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/RootFolderTests/RootFolderServiceFixture.cs) | Vérifier que `.bin` est bien ignoré dans les scans |
+| [src/NzbDrone.Core.Test/MediaFiles/RecycleBinFilesystemSmokeFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/MediaFiles/RecycleBinFilesystemSmokeFixture.cs) | Ajouter un smoke test sur vrai filesystem pour suppression et upgrade |
+
+## Fichier modifié mais non lié au patch
+
+| Fichier | Statut |
+|---|---|
+| [.devcontainer/Dockerfile](/workspaces/Radarr/.devcontainer/Dockerfile) | Modification locale préexistante, non liée à ce patch recycle bin |

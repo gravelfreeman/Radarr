@@ -11,28 +11,11 @@ namespace Radarr.Api.V3.Config
     public class MediaManagementConfigController : ConfigController<MediaManagementConfigResource>
     {
         public MediaManagementConfigController(IConfigService configService,
-                                           PathExistsValidator pathExistsValidator,
-                                           FolderChmodValidator folderChmodValidator,
-                                           FolderWritableValidator folderWritableValidator,
-                                           MoviePathValidator moviePathValidator,
-                                           StartupFolderValidator startupFolderValidator,
-                                           SystemFolderValidator systemFolderValidator,
-                                           RootFolderAncestorValidator rootFolderAncestorValidator,
-                                           RootFolderValidator rootFolderValidator)
+                                           FolderChmodValidator folderChmodValidator)
             : base(configService)
         {
             SharedValidator.RuleFor(c => c.RecycleBinCleanupDays).GreaterThanOrEqualTo(0);
             SharedValidator.RuleFor(c => c.ChmodFolder).SetValidator(folderChmodValidator).When(c => !string.IsNullOrEmpty(c.ChmodFolder) && (OsInfo.IsLinux || OsInfo.IsOsx));
-
-            SharedValidator.RuleFor(c => c.RecycleBin).IsValidPath()
-                                                      .SetValidator(folderWritableValidator)
-                                                      .SetValidator(rootFolderValidator)
-                                                      .SetValidator(pathExistsValidator)
-                                                      .SetValidator(rootFolderAncestorValidator)
-                                                      .SetValidator(startupFolderValidator)
-                                                      .SetValidator(systemFolderValidator)
-                                                      .SetValidator(moviePathValidator)
-                                                      .When(c => !string.IsNullOrWhiteSpace(c.RecycleBin));
 
             SharedValidator.RuleFor(c => c.ScriptImportPath).IsValidPath().When(c => c.UseScriptImport);
 

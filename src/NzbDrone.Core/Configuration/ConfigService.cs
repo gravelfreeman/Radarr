@@ -91,10 +91,10 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("Retention", value); }
         }
 
-        public string RecycleBin
+        public bool RecycleBinEnabled
         {
-            get { return GetValue("RecycleBin", string.Empty); }
-            set { SetValue("RecycleBin", value); }
+            get { return GetValueBoolean("RecycleBinEnabled", false); }
+            set { SetValue("RecycleBinEnabled", value); }
         }
 
         public int RecycleBinCleanupDays
