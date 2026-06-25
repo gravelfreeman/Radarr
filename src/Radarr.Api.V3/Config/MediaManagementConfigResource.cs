@@ -9,6 +9,7 @@ namespace Radarr.Api.V3.Config
     {
         public bool AutoUnmonitorPreviouslyDownloadedMovies { get; set; }
         public bool RecycleBinEnabled { get; set; }
+        public RecycleBinMode RecycleBinMode { get; set; }
         public int RecycleBinCleanupDays { get; set; }
         public ProperDownloadTypes DownloadPropersAndRepacks { get; set; }
         public bool CreateEmptyMovieFolders { get; set; }
@@ -40,6 +41,7 @@ namespace Radarr.Api.V3.Config
             {
                 AutoUnmonitorPreviouslyDownloadedMovies = model.AutoUnmonitorPreviouslyDownloadedMovies,
                 RecycleBinEnabled = model.RecycleBinEnabled,
+                RecycleBinMode = model.RecycleBinMode,
                 RecycleBinCleanupDays = model.RecycleBinCleanupDays,
                 DownloadPropersAndRepacks = model.DownloadPropersAndRepacks,
                 CreateEmptyMovieFolders = model.CreateEmptyMovieFolders,

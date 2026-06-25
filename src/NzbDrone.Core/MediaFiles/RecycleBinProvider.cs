@@ -16,8 +16,8 @@ namespace NzbDrone.Core.MediaFiles
 {
     public interface IRecycleBinProvider
     {
-        void DeleteFolder(string path);
-        string DeleteFile(string path, string subfolder = "");
+        void DeleteFolder(string path, RecycleBinOperation operation = RecycleBinOperation.Delete);
+        string DeleteFile(string path, string subfolder = "", RecycleBinOperation operation = RecycleBinOperation.Delete);
         void Empty();
         void Cleanup();
     }
@@ -44,11 +44,11 @@ namespace NzbDrone.Core.MediaFiles
             _logger = logger;
         }
 
-        public void DeleteFolder(string path)
+        public void DeleteFolder(string path, RecycleBinOperation operation = RecycleBinOperation.Delete)
         {
             _logger.Info("Attempting to send '{0}' to recycling bin", path);
 
-            if (!ShouldUseRecycleBin(path))
+            if (!ShouldUseRecycleBin(path, operation))
             {
                 _logger.Info("Recycling Bin is disabled, deleting permanently. {0}", path);
                 _diskProvider.DeleteFolder(path, true);
@@ -73,11 +73,11 @@ namespace NzbDrone.Core.MediaFiles
             }
         }
 
-        public string DeleteFile(string path, string subfolder = "")
+        public string DeleteFile(string path, string subfolder = "", RecycleBinOperation operation = RecycleBinOperation.Delete)
         {
             _logger.Debug("Attempting to send '{0}' to recycling bin", path);
 
-            if (!ShouldUseRecycleBin(path))
+            if (!ShouldUseRecycleBin(path, operation))
             {
                 _logger.Info("Recycling Bin is disabled, deleting permanently. {0}", path);
 
@@ -235,7 +235,7 @@ namespace NzbDrone.Core.MediaFiles
             return Path.Combine(rootFolder.Path, RecycleBinFolder);
         }
 
-        private bool ShouldUseRecycleBin(string path)
+        private bool ShouldUseRecycleBin(string path, RecycleBinOperation operation)
         {
             if (!_configService.RecycleBinEnabled)
             {
@@ -244,7 +244,18 @@ namespace NzbDrone.Core.MediaFiles
 
             var rootFolder = _rootFolderService.GetBestRootFolder(path);
 
-            return rootFolder?.RecycleBinEnabled == true;
+            if (rootFolder?.RecycleBinEnabled != true)
+            {
+                return false;
+            }
+
+            return _configService.RecycleBinMode switch
+            {
+                RecycleBinMode.Both => true,
+                RecycleBinMode.UpgradesOnly => operation == RecycleBinOperation.Upgrade,
+                RecycleBinMode.DeletesOnly => operation == RecycleBinOperation.Delete,
+                _ => true
+            };
         }
 
         private string[] GetRecycleBins()

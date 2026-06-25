@@ -58,7 +58,7 @@ namespace NzbDrone.Core.MediaFiles
                 if (_diskProvider.FileExists(movieFilePath))
                 {
                     _logger.Debug("Removing existing movie file: {0}", existingFile);
-                    recycleBinPath = _recycleBinProvider.DeleteFile(movieFilePath, subfolder);
+                    recycleBinPath = _recycleBinProvider.DeleteFile(movieFilePath, subfolder, RecycleBinOperation.Upgrade);
                 }
                 else
                 {

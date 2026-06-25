@@ -97,6 +97,12 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("RecycleBinEnabled", value); }
         }
 
+        public RecycleBinMode RecycleBinMode
+        {
+            get { return GetValueEnum("RecycleBinMode", NzbDrone.Core.MediaFiles.RecycleBinMode.Both); }
+            set { SetValue("RecycleBinMode", value); }
+        }
+
         public int RecycleBinCleanupDays
         {
             get { return GetValueInt("RecycleBinCleanupDays", 7); }

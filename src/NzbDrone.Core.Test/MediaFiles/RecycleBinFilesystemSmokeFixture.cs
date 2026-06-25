@@ -116,6 +116,7 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             var configService = new Mock<IConfigService>();
             configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
+            configService.SetupGet(s => s.RecycleBinMode).Returns(RecycleBinMode.Both);
 
             var rootFolderService = new Mock<IRootFolderService>();
             rootFolderService.Setup(s => s.GetBestRootFolder(sourceFile, null))
@@ -163,6 +164,7 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             var configService = new Mock<IConfigService>();
             configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
+            configService.SetupGet(s => s.RecycleBinMode).Returns(RecycleBinMode.Both);
 
             var rootFolderService = new Mock<IRootFolderService>();
             rootFolderService.Setup(s => s.GetBestRootFolder(oldFile, null))
@@ -204,6 +206,117 @@ namespace NzbDrone.Core.Test.MediaFiles
             File.Exists(expectedRecycleBinFile).Should().BeTrue();
             result.OldFiles.Should().HaveCount(1);
             result.OldFiles[0].RecycleBinPath.Should().Be(expectedRecycleBinFile);
+
+            mediaFileService.Verify(v => v.Delete(existingMovieFile, DeleteMediaFileReason.Upgrade), Times.Once());
+            moveMovieFiles.Verify(v => v.MoveMovieFile(It.IsAny<MovieFile>(), localMovie), Times.Once());
+        }
+
+        [Test]
+        public void should_delete_manually_deleted_movie_file_permanently_when_mode_is_upgrades_only()
+        {
+            var rootFolder = Path.Combine(TempFolder, "lib-manual-delete-upgrades-only");
+            var movieFolder = Path.Combine(rootFolder, "Movie Manual Delete");
+            var sourceFile = Path.Combine(movieFolder, "Movie Manual Delete (2026).mkv");
+            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Manual Delete", "Movie Manual Delete (2026).mkv");
+
+            Directory.CreateDirectory(movieFolder);
+            File.WriteAllText(sourceFile, "manual-delete-test");
+
+            var diskProvider = new TestDiskProvider();
+            var diskTransferService = new DiskTransferService(diskProvider, TestLogger);
+
+            var configService = new Mock<IConfigService>();
+            configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
+            configService.SetupGet(s => s.RecycleBinMode).Returns(RecycleBinMode.UpgradesOnly);
+
+            var rootFolderService = new Mock<IRootFolderService>();
+            rootFolderService.Setup(s => s.GetBestRootFolder(sourceFile, null))
+                             .Returns(new RootFolder { Path = rootFolder, RecycleBinEnabled = true });
+
+            var recycleBinProvider = new RecycleBinProvider(diskTransferService, diskProvider, configService.Object, rootFolderService.Object, TestLogger);
+
+            var mediaFileService = new Mock<IMediaFileService>();
+            var movieService = new Mock<IMovieService>();
+            var eventAggregator = new Mock<IEventAggregator>();
+
+            var subject = new NzbDrone.Core.MediaFiles.MediaFileDeletionService(diskProvider, recycleBinProvider, mediaFileService.Object, movieService.Object, configService.Object, eventAggregator.Object, TestLogger);
+
+            var movie = new Movie
+            {
+                Path = movieFolder
+            };
+
+            var movieFile = new MovieFile
+            {
+                Path = sourceFile,
+                RelativePath = "Movie Manual Delete (2026).mkv"
+            };
+
+            subject.DeleteMovieFile(movie, movieFile);
+
+            File.Exists(sourceFile).Should().BeFalse();
+            File.Exists(expectedRecycleBinFile).Should().BeFalse();
+            mediaFileService.Verify(v => v.Delete(movieFile, DeleteMediaFileReason.Manual), Times.Once());
+        }
+
+        [Test]
+        public void should_delete_old_movie_file_permanently_on_upgrade_when_mode_is_deletes_only()
+        {
+            var rootFolder = Path.Combine(TempFolder, "lib-upgrade-deletes-only");
+            var movieFolder = Path.Combine(rootFolder, "Movie Upgrade");
+            var oldFile = Path.Combine(movieFolder, "Movie Upgrade (2024).mkv");
+            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Upgrade", "Movie Upgrade (2024).mkv");
+
+            Directory.CreateDirectory(movieFolder);
+            File.WriteAllText(oldFile, "old-file");
+
+            var diskProvider = new TestDiskProvider();
+            var diskTransferService = new DiskTransferService(diskProvider, TestLogger);
+
+            var configService = new Mock<IConfigService>();
+            configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
+            configService.SetupGet(s => s.RecycleBinMode).Returns(RecycleBinMode.DeletesOnly);
+
+            var rootFolderService = new Mock<IRootFolderService>();
+            rootFolderService.Setup(s => s.GetBestRootFolder(oldFile, null))
+                             .Returns(new RootFolder { Path = rootFolder, RecycleBinEnabled = true });
+
+            var recycleBinProvider = new RecycleBinProvider(diskTransferService, diskProvider, configService.Object, rootFolderService.Object, TestLogger);
+
+            var mediaFileService = new Mock<IMediaFileService>();
+            var moveMovieFiles = new Mock<IMoveMovieFiles>();
+
+            moveMovieFiles.Setup(s => s.MoveMovieFile(It.IsAny<MovieFile>(), It.IsAny<LocalMovie>()))
+                          .Returns(new MovieFile
+                          {
+                              RelativePath = "Movie Upgrade (2025).mkv",
+                              Path = Path.Combine(movieFolder, "Movie Upgrade (2025).mkv")
+                          });
+
+            var subject = new UpgradeMediaFileService(recycleBinProvider, mediaFileService.Object, moveMovieFiles.Object, diskProvider, TestLogger);
+
+            var existingMovieFile = new MovieFile
+            {
+                Id = 1,
+                RelativePath = "Movie Upgrade (2024).mkv"
+            };
+
+            var localMovie = new LocalMovie
+            {
+                Movie = new Movie
+                {
+                    Path = movieFolder,
+                    MovieFileId = 1,
+                    MovieFile = existingMovieFile
+                }
+            };
+
+            var result = subject.UpgradeMovieFile(new MovieFile(), localMovie);
+
+            File.Exists(oldFile).Should().BeFalse();
+            File.Exists(expectedRecycleBinFile).Should().BeFalse();
+            result.OldFiles.Should().HaveCount(1);
+            result.OldFiles[0].RecycleBinPath.Should().BeNull();
 
             mediaFileService.Verify(v => v.Delete(existingMovieFile, DeleteMediaFileReason.Upgrade), Times.Once());
             moveMovieFiles.Verify(v => v.MoveMovieFile(It.IsAny<MovieFile>(), localMovie), Times.Once());
