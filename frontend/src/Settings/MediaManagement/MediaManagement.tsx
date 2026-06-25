@@ -95,6 +95,27 @@ const fileDateOptions: EnhancedSelectInputValue<string>[] = [
   },
 ];
 
+const recycleBinModeOptions: EnhancedSelectInputValue<string>[] = [
+  {
+    key: 'both',
+    get value() {
+      return translate('Both');
+    },
+  },
+  {
+    key: 'upgradesOnly',
+    get value() {
+      return translate('UpgradesOnly');
+    },
+  },
+  {
+    key: 'deletesOnly',
+    get value() {
+      return translate('DeletesOnly');
+    },
+  },
+];
+
 function MediaManagement() {
   const dispatch = useDispatch();
   const showAdvancedSettings = useShowAdvancedSettings();
@@ -438,6 +459,23 @@ function MediaManagement() {
                   helpText={translate('RecyclingBinHelpText')}
                   onChange={handleInputChange}
                   {...settings.recycleBinEnabled}
+                />
+              </FormGroup>
+
+              <FormGroup
+                advancedSettings={showAdvancedSettings}
+                isAdvanced={true}
+              >
+                <FormLabel>{translate('UseRecyclingBinFor')}</FormLabel>
+
+                <FormInputGroup
+                  type={inputTypes.SELECT}
+                  isDisabled={!settings.recycleBinEnabled.value}
+                  name="recycleBinMode"
+                  helpText={translate('UseRecyclingBinForHelpText')}
+                  values={recycleBinModeOptions}
+                  onChange={handleInputChange}
+                  {...settings.recycleBinMode}
                 />
               </FormGroup>
 
