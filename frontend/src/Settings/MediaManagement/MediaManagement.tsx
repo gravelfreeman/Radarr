@@ -428,16 +428,16 @@ function MediaManagement() {
               <FormGroup
                 advancedSettings={showAdvancedSettings}
                 isAdvanced={true}
+                size={sizes.MEDIUM}
               >
                 <FormLabel>{translate('RecyclingBin')}</FormLabel>
 
                 <FormInputGroup
-                  type={inputTypes.PATH}
-                  name="recycleBin"
+                  type={inputTypes.CHECK}
+                  name="recycleBinEnabled"
                   helpText={translate('RecyclingBinHelpText')}
-                  includeFiles={false}
                   onChange={handleInputChange}
-                  {...settings.recycleBin}
+                  {...settings.recycleBinEnabled}
                 />
               </FormGroup>
 

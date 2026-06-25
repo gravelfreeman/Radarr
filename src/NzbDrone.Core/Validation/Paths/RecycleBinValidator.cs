@@ -1,25 +1,16 @@
+using System;
+using System.IO;
 using FluentValidation.Validators;
-using NzbDrone.Common.Extensions;
-using NzbDrone.Core.Configuration;
 
 namespace NzbDrone.Core.Validation.Paths
 {
     public class RecycleBinValidator : PropertyValidator
     {
-        private readonly IConfigService _configService;
-
-        public RecycleBinValidator(IConfigService configService)
-        {
-            _configService = configService;
-        }
-
-        protected override string GetDefaultMessageTemplate() => "Path '{path}' is {relationship} configured recycle bin folder";
+        protected override string GetDefaultMessageTemplate() => "Path '{path}' is {relationship} recycle bin folder";
 
         protected override bool IsValid(PropertyValidatorContext context)
         {
-            var recycleBin = _configService.RecycleBin;
-
-            if (context.PropertyValue == null || recycleBin.IsNullOrWhiteSpace())
+            if (context.PropertyValue == null)
             {
                 return true;
             }
@@ -27,18 +18,27 @@ namespace NzbDrone.Core.Validation.Paths
             var folder = context.PropertyValue.ToString();
             context.MessageFormatter.AppendArgument("path", folder);
 
-            if (recycleBin.PathEquals(folder))
+            var directory = new DirectoryInfo(folder);
+
+            if (directory.Name.Equals(".bin", StringComparison.InvariantCultureIgnoreCase))
             {
                 context.MessageFormatter.AppendArgument("relationship", "set to");
 
                 return false;
             }
 
-            if (recycleBin.IsParentPath(folder))
-            {
-                context.MessageFormatter.AppendArgument("relationship", "child of");
+            directory = directory.Parent;
 
-                return false;
+            while (directory != null)
+            {
+                if (directory.Name.Equals(".bin", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    context.MessageFormatter.AppendArgument("relationship", "child of");
+
+                    return false;
+                }
+
+                directory = directory.Parent;
             }
 
             return true;

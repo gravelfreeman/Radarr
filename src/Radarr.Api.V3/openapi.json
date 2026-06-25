@@ -10550,9 +10550,8 @@
           "autoUnmonitorPreviouslyDownloadedMovies": {
             "type": "boolean"
           },
-          "recycleBin": {
-            "type": "string",
-            "nullable": true
+          "recycleBinEnabled": {
+            "type": "boolean"
           },
           "recycleBinCleanupDays": {
             "type": "integer",
