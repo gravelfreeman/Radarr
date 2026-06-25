@@ -28,6 +28,11 @@ const rootFolderColumns: Column[] = [
     isVisible: true,
   },
   {
+    name: 'recycleBinEnabled',
+    label: () => translate('RecyclingBin'),
+    isVisible: true,
+  },
+  {
     name: 'actions',
     label: '',
     isVisible: true,
@@ -64,6 +69,7 @@ function RootFolders() {
               key={rootFolder.id}
               id={rootFolder.id}
               path={rootFolder.path}
+              recycleBinEnabled={rootFolder.recycleBinEnabled}
               accessible={rootFolder.accessible}
               freeSpace={rootFolder.freeSpace}
               unmappedFolders={rootFolder.unmappedFolders}

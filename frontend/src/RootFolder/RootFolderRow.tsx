@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useDispatch } from 'react-redux';
+import CheckInput from 'Components/Form/CheckInput';
 import Label from 'Components/Label';
 import IconButton from 'Components/Link/IconButton';
 import Link from 'Components/Link/Link';
@@ -7,7 +8,11 @@ import ConfirmModal from 'Components/Modal/ConfirmModal';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableRow from 'Components/Table/TableRow';
 import { icons, kinds } from 'Helpers/Props';
-import { deleteRootFolder } from 'Store/Actions/rootFolderActions';
+import {
+  deleteRootFolder,
+  updateRootFolder,
+} from 'Store/Actions/rootFolderActions';
+import { CheckInputChanged } from 'typings/inputs';
 import formatBytes from 'Utilities/Number/formatBytes';
 import translate from 'Utilities/String/translate';
 import styles from './RootFolderRow.css';
@@ -15,13 +20,21 @@ import styles from './RootFolderRow.css';
 interface RootFolderRowProps {
   id: number;
   path: string;
+  recycleBinEnabled: boolean;
   accessible: boolean;
   freeSpace?: number;
   unmappedFolders: object[];
 }
 
 function RootFolderRow(props: RootFolderRowProps) {
-  const { id, path, accessible, freeSpace = 0, unmappedFolders = [] } = props;
+  const {
+    id,
+    path,
+    recycleBinEnabled,
+    accessible,
+    freeSpace = 0,
+    unmappedFolders = [],
+  } = props;
 
   const isUnavailable = !accessible;
 
@@ -42,6 +55,13 @@ function RootFolderRow(props: RootFolderRowProps) {
 
     setIsDeleteModalOpen(false);
   }, [dispatch, id]);
+
+  const onRecycleBinEnabledChange = useCallback(
+    ({ value }: CheckInputChanged) => {
+      dispatch(updateRootFolder({ id, recycleBinEnabled: value }));
+    },
+    [dispatch, id]
+  );
 
   return (
     <TableRow>
@@ -69,6 +89,14 @@ function RootFolderRow(props: RootFolderRowProps) {
 
       <TableRowCell className={styles.unmappedFolders}>
         {isUnavailable ? '-' : unmappedFolders.length}
+      </TableRowCell>
+
+      <TableRowCell className={styles.recycleBinEnabled}>
+        <CheckInput
+          name={`recycleBinEnabled-${id}`}
+          value={recycleBinEnabled}
+          onChange={onRecycleBinEnabledChange}
+        />
       </TableRowCell>
 
       <TableRowCell className={styles.actions}>

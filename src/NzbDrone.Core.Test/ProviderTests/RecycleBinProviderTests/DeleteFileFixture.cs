@@ -42,7 +42,8 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WithRecycleBin();
 
             var path = @"C:\Test\Movie\The Mask (1994)\The Mask.avi".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\Movie".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\Movie".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFile(path);
 
@@ -55,7 +56,8 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WithRecycleBin();
 
             var path = @"C:\Test\Movie\The Mask (1994)\The Mask.avi".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\Movie".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\Movie".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.FileExists(@"C:\Test\Movie\.bin\The Mask.avi".AsOsAgnostic()))
@@ -72,7 +74,8 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WindowsOnly();
             WithRecycleBin();
             var path = @"C:\Test\Movie\The Mask (1994)\The Mask.avi".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\Movie".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\Movie".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFile(path);
 
@@ -85,11 +88,27 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WithRecycleBin();
 
             var path = @"C:\Test\Movie\The Mask (1994)\The Mask.avi".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\Movie".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\Movie".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFile(path, "The Mask (1994)");
 
             Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFile(path, @"C:\Test\Movie\.bin\The Mask (1994)\The Mask.avi".AsOsAgnostic(), TransferMode.Move, false), Times.Once());
+        }
+
+        [Test]
+        public void should_use_delete_when_root_folder_recycle_bin_is_disabled()
+        {
+            WithRecycleBin();
+
+            var path = @"C:\Test\Movie\The Mask (1994)\The Mask.avi".AsOsAgnostic();
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\Movie".AsOsAgnostic(), RecycleBinEnabled = false });
+
+            Mocker.Resolve<RecycleBinProvider>().DeleteFile(path);
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile(path), Times.Once());
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TransferMode>(), It.IsAny<bool>()), Times.Never());
         }
     }
 }

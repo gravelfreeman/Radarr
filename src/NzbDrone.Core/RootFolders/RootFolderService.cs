@@ -18,8 +18,10 @@ namespace NzbDrone.Core.RootFolders
         List<RootFolder> All();
         List<RootFolder> AllWithUnmappedFolders();
         RootFolder Add(RootFolder rootDir);
+        RootFolder Update(RootFolder rootDir);
         void Remove(int id);
         RootFolder Get(int id, bool timeout);
+        RootFolder GetBestRootFolder(string path, List<RootFolder> rootFolders = null);
         string GetBestRootFolderPath(string path, List<RootFolder> rootFolders = null);
     }
 
@@ -131,6 +133,14 @@ namespace NzbDrone.Core.RootFolders
             return rootFolder;
         }
 
+        public RootFolder Update(RootFolder rootFolder)
+        {
+            _rootFolderRepository.Update(rootFolder);
+            _cache.Clear();
+
+            return rootFolder;
+        }
+
         public void Remove(int id)
         {
             _rootFolderRepository.Delete(id);
@@ -199,6 +209,14 @@ namespace NzbDrone.Core.RootFolders
             return rootFolder;
         }
 
+        public RootFolder GetBestRootFolder(string path, List<RootFolder> rootFolders = null)
+        {
+            var allRootFoldersToConsider = rootFolders ?? All();
+
+            return allRootFoldersToConsider.Where(r => r.Path.IsParentPath(path))
+                                           .MaxBy(r => r.Path.Length);
+        }
+
         public string GetBestRootFolderPath(string path, List<RootFolder> rootFolders = null)
         {
             return _cache.Get(path, () => GetBestRootFolderPathInternal(path, rootFolders), TimeSpan.FromDays(1));
@@ -220,9 +238,7 @@ namespace NzbDrone.Core.RootFolders
 
         private string GetBestRootFolderPathInternal(string path, List<RootFolder> rootFolders = null)
         {
-            var allRootFoldersToConsider = rootFolders ?? All();
-
-            var possibleRootFolder = allRootFoldersToConsider.Where(r => r.Path.IsParentPath(path)).MaxBy(r => r.Path.Length);
+            var possibleRootFolder = GetBestRootFolder(path, rootFolders);
 
             if (possibleRootFolder == null)
             {

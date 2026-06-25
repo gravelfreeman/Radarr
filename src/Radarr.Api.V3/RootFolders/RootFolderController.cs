@@ -29,7 +29,7 @@ namespace Radarr.Api.V3.RootFolders
         {
             _rootFolderService = rootFolderService;
 
-            SharedValidator.RuleFor(c => c.Path)
+            PostValidator.RuleFor(c => c.Path)
                 .Cascade(CascadeMode.Stop)
                 .IsValidPath()
                            .SetValidator(rootFolderValidator)
@@ -55,6 +55,16 @@ namespace Radarr.Api.V3.RootFolders
             var model = rootFolderResource.ToModel();
 
             return Created(_rootFolderService.Add(model).Id);
+        }
+
+        [RestPutById]
+        [Consumes("application/json")]
+        public ActionResult<RootFolderResource> UpdateRootFolder([FromBody] RootFolderResource rootFolderResource)
+        {
+            var existing = _rootFolderService.Get(rootFolderResource.Id, false);
+            existing.RecycleBinEnabled = rootFolderResource.RecycleBinEnabled;
+
+            return Accepted(_rootFolderService.Update(existing).Id);
         }
 
         [HttpGet]

@@ -28,6 +28,7 @@ export const defaultState = {
 
 export const FETCH_ROOT_FOLDERS = 'rootFolders/fetchRootFolders';
 export const ADD_ROOT_FOLDER = 'rootFolders/addRootFolder';
+export const UPDATE_ROOT_FOLDER = 'rootFolders/updateRootFolder';
 export const DELETE_ROOT_FOLDER = 'rootFolders/deleteRootFolder';
 
 //
@@ -35,6 +36,7 @@ export const DELETE_ROOT_FOLDER = 'rootFolders/deleteRootFolder';
 
 export const fetchRootFolders = createThunk(FETCH_ROOT_FOLDERS);
 export const addRootFolder = createThunk(ADD_ROOT_FOLDER);
+export const updateRootFolder = createThunk(UPDATE_ROOT_FOLDER);
 export const deleteRootFolder = createThunk(DELETE_ROOT_FOLDER);
 
 //
@@ -49,6 +51,24 @@ export const actionHandlers = handleThunks({
     '/rootFolder',
     (state) => state.rootFolders
   ),
+
+  [UPDATE_ROOT_FOLDER]: function(getState, payload, dispatch) {
+    const { id, recycleBinEnabled } = payload;
+
+    const promise = createAjaxRequest({
+      url: `/rootFolder/${id}`,
+      method: 'PUT',
+      data: JSON.stringify({ id, recycleBinEnabled }),
+      dataType: 'json'
+    }).request;
+
+    promise.done((data) => {
+      dispatch(updateItem({
+        section,
+        ...data
+      }));
+    });
+  },
 
   [ADD_ROOT_FOLDER]: function(getState, payload, dispatch) {
     const path = payload.path;

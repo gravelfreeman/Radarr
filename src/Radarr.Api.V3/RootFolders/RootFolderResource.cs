@@ -9,6 +9,7 @@ namespace Radarr.Api.V3.RootFolders
     public class RootFolderResource : RestResource
     {
         public string Path { get; set; }
+        public bool RecycleBinEnabled { get; set; }
         public bool Accessible { get; set; }
         public long? FreeSpace { get; set; }
 
@@ -29,6 +30,7 @@ namespace Radarr.Api.V3.RootFolders
                 Id = model.Id,
 
                 Path = model.Path.GetCleanPath(),
+                RecycleBinEnabled = model.RecycleBinEnabled,
                 Accessible = model.Accessible,
                 FreeSpace = model.FreeSpace,
                 UnmappedFolders = model.UnmappedFolders
@@ -45,8 +47,8 @@ namespace Radarr.Api.V3.RootFolders
             return new RootFolder
             {
                 Id = resource.Id,
-
-                Path = resource.Path
+                Path = resource.Path,
+                RecycleBinEnabled = resource.RecycleBinEnabled
 
                 // Accessible
                 // FreeSpace

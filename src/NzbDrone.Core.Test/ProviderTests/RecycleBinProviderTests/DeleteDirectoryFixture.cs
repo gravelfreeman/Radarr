@@ -42,7 +42,8 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WithRecycleBin();
 
             var path = @"C:\Test\TV\30 Rock".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\TV".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\TV".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
@@ -56,7 +57,8 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WithRecycleBin();
 
             var path = @"C:\Test\TV\30 Rock".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\TV".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\TV".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
@@ -69,7 +71,8 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WindowsOnly();
             WithRecycleBin();
             var path = @"C:\Test\TV\30 Rock".AsOsAgnostic();
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolderPath(path, null)).Returns(@"C:\Test\TV".AsOsAgnostic());
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\TV".AsOsAgnostic(), RecycleBinEnabled = true });
 
             Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(@"C:\Test\TV\.bin\30 Rock".AsOsAgnostic(), true))
                                            .Returns(new[] { "File1", "File2", "File3" });
@@ -77,6 +80,21 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.FileSetLastWriteTime(It.IsAny<string>(), It.IsAny<DateTime>()), Times.Exactly(3));
+        }
+
+        [Test]
+        public void should_use_delete_when_root_folder_recycle_bin_is_disabled()
+        {
+            WithRecycleBin();
+
+            var path = @"C:\Test\TV\30 Rock".AsOsAgnostic();
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = @"C:\Test\TV".AsOsAgnostic(), RecycleBinEnabled = false });
+
+            Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFolder(path, true), Times.Once());
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TransferMode>()), Times.Never());
         }
     }
 }
