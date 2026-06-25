@@ -5,6 +5,7 @@ using NUnit.Framework;
 using NzbDrone.Common.Disk;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RootFolders;
@@ -88,7 +89,8 @@ namespace NzbDrone.Core.Test.MediaFiles
             configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
 
             var rootFolderService = new Mock<IRootFolderService>();
-            rootFolderService.Setup(s => s.GetBestRootFolderPath(sourceFile, null)).Returns(rootFolder);
+            rootFolderService.Setup(s => s.GetBestRootFolder(sourceFile, null))
+                             .Returns(new RootFolder { Path = rootFolder, RecycleBinEnabled = true });
 
             var subject = new RecycleBinProvider(diskTransferService, diskProvider, configService.Object, rootFolderService.Object, TestLogger);
 
@@ -96,6 +98,53 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             File.Exists(sourceFile).Should().BeFalse();
             File.Exists(expectedRecycleBinFile).Should().BeTrue();
+        }
+
+        [Test]
+        public void should_move_manually_deleted_movie_file_to_root_folder_bin()
+        {
+            var rootFolder = Path.Combine(TempFolder, "lib-manual-delete");
+            var movieFolder = Path.Combine(rootFolder, "Movie Manual Delete");
+            var sourceFile = Path.Combine(movieFolder, "Movie Manual Delete (2026).mkv");
+            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Manual Delete", "Movie Manual Delete (2026).mkv");
+
+            Directory.CreateDirectory(movieFolder);
+            File.WriteAllText(sourceFile, "manual-delete-test");
+
+            var diskProvider = new TestDiskProvider();
+            var diskTransferService = new DiskTransferService(diskProvider, TestLogger);
+
+            var configService = new Mock<IConfigService>();
+            configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
+
+            var rootFolderService = new Mock<IRootFolderService>();
+            rootFolderService.Setup(s => s.GetBestRootFolder(sourceFile, null))
+                             .Returns(new RootFolder { Path = rootFolder, RecycleBinEnabled = true });
+
+            var recycleBinProvider = new RecycleBinProvider(diskTransferService, diskProvider, configService.Object, rootFolderService.Object, TestLogger);
+
+            var mediaFileService = new Mock<IMediaFileService>();
+            var movieService = new Mock<IMovieService>();
+            var eventAggregator = new Mock<IEventAggregator>();
+
+            var subject = new NzbDrone.Core.MediaFiles.MediaFileDeletionService(diskProvider, recycleBinProvider, mediaFileService.Object, movieService.Object, configService.Object, eventAggregator.Object, TestLogger);
+
+            var movie = new Movie
+            {
+                Path = movieFolder
+            };
+
+            var movieFile = new MovieFile
+            {
+                Path = sourceFile,
+                RelativePath = "Movie Manual Delete (2026).mkv"
+            };
+
+            subject.DeleteMovieFile(movie, movieFile);
+
+            File.Exists(sourceFile).Should().BeFalse();
+            File.Exists(expectedRecycleBinFile).Should().BeTrue();
+            mediaFileService.Verify(v => v.Delete(movieFile, DeleteMediaFileReason.Manual), Times.Once());
         }
 
         [Test]
@@ -116,7 +165,8 @@ namespace NzbDrone.Core.Test.MediaFiles
             configService.SetupGet(s => s.RecycleBinEnabled).Returns(true);
 
             var rootFolderService = new Mock<IRootFolderService>();
-            rootFolderService.Setup(s => s.GetBestRootFolderPath(oldFile, null)).Returns(rootFolder);
+            rootFolderService.Setup(s => s.GetBestRootFolder(oldFile, null))
+                             .Returns(new RootFolder { Path = rootFolder, RecycleBinEnabled = true });
 
             var recycleBinProvider = new RecycleBinProvider(diskTransferService, diskProvider, configService.Object, rootFolderService.Object, TestLogger);
 

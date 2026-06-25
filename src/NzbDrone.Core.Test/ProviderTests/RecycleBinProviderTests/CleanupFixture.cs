@@ -42,7 +42,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
         {
             Mocker.GetMock<IConfigService>().SetupGet(s => s.RecycleBinEnabled).Returns(true);
             Mocker.GetMock<IConfigService>().SetupGet(s => s.RecycleBinCleanupDays).Returns(7);
-            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(new List<RootFolder> { new RootFolder { Path = _rootFolder } });
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(new List<RootFolder> { new RootFolder { Path = _rootFolder, RecycleBinEnabled = true } });
             Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(It.IsAny<string>())).Returns(true);
 
             Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectories(It.IsAny<string>()))
@@ -96,6 +96,16 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().Cleanup();
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile(It.IsAny<string>()), Times.Never());
+        }
+
+        [Test]
+        public void should_skip_root_folders_with_recycle_bin_disabled()
+        {
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(new List<RootFolder> { new RootFolder { Path = _rootFolder, RecycleBinEnabled = false } });
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(It.IsAny<string>(), true), Times.Never());
         }
     }
 }

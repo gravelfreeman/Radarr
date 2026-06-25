@@ -66,6 +66,20 @@ namespace NzbDrone.Core.Test.RootFolderTests
         }
 
         [Test]
+        public void should_enable_recycle_bin_by_default_when_adding_root_dir()
+        {
+            Mocker.GetMock<IMovieRepository>()
+                  .Setup(s => s.AllMoviePaths())
+                  .Returns(new Dictionary<int, string>());
+
+            var root = new RootFolder { Path = @"C:\Movies".AsOsAgnostic() };
+
+            Subject.Add(root);
+
+            root.RecycleBinEnabled.Should().BeTrue();
+        }
+
+        [Test]
         public void should_throw_if_folder_being_added_doesnt_exist()
         {
             WithNonExistingFolder();

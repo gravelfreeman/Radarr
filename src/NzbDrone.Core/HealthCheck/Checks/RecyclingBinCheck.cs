@@ -33,6 +33,11 @@ namespace NzbDrone.Core.HealthCheck.Checks
 
             foreach (var rootFolder in _rootFolderService.All())
             {
+                if (!rootFolder.RecycleBinEnabled)
+                {
+                    continue;
+                }
+
                 var recycleBin = Path.Combine(rootFolder.Path, ".bin");
                 var folderToCheck = _diskProvider.FolderExists(recycleBin) ? recycleBin : rootFolder.Path;
 

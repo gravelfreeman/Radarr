@@ -48,7 +48,7 @@ namespace NzbDrone.Core.MediaFiles
         {
             _logger.Info("Attempting to send '{0}' to recycling bin", path);
 
-            if (!_configService.RecycleBinEnabled)
+            if (!ShouldUseRecycleBin(path))
             {
                 _logger.Info("Recycling Bin is disabled, deleting permanently. {0}", path);
                 _diskProvider.DeleteFolder(path, true);
@@ -77,7 +77,7 @@ namespace NzbDrone.Core.MediaFiles
         {
             _logger.Debug("Attempting to send '{0}' to recycling bin", path);
 
-            if (!_configService.RecycleBinEnabled)
+            if (!ShouldUseRecycleBin(path))
             {
                 _logger.Info("Recycling Bin is disabled, deleting permanently. {0}", path);
 
@@ -225,14 +225,32 @@ namespace NzbDrone.Core.MediaFiles
 
         private string GetRecycleBin(string path)
         {
-            var rootFolder = _rootFolderService.GetBestRootFolderPath(path);
+            var rootFolder = _rootFolderService.GetBestRootFolder(path);
 
-            return Path.Combine(rootFolder, RecycleBinFolder);
+            if (rootFolder == null)
+            {
+                return null;
+            }
+
+            return Path.Combine(rootFolder.Path, RecycleBinFolder);
+        }
+
+        private bool ShouldUseRecycleBin(string path)
+        {
+            if (!_configService.RecycleBinEnabled)
+            {
+                return false;
+            }
+
+            var rootFolder = _rootFolderService.GetBestRootFolder(path);
+
+            return rootFolder?.RecycleBinEnabled == true;
         }
 
         private string[] GetRecycleBins()
         {
             return _rootFolderService.All()
+                                     .Where(r => r.RecycleBinEnabled)
                                      .Select(r => Path.Combine(r.Path, RecycleBinFolder))
                                      .Distinct(PathEqualityComparer.Instance)
                                      .ToArray();
