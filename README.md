@@ -63,6 +63,25 @@ Frontend :
 yarn build
 ```
 
+## Workflows GitHub
+
+Le repo contient maintenant une base CI/CD versionnée :
+
+- `.github/workflows/ci.yml` : build backend/frontend + tests ciblés du fork
+- `.github/workflows/upstream-sync.yml` : détecte une nouvelle release upstream, crée une PR de sync et active l'auto-merge si tout est clean
+- `.github/workflows/docker-publish.yml` : build l'image et la push sur GHCR après push sur `develop`
+
+Convention de version image :
+
+- upstream `v6.2.1.10461`
+- image fork `6.2.1.10461-bin1`
+
+Tags publiés :
+
+- `ghcr.io/<owner>/radarr:6.2.1.10461-bin1`
+- `ghcr.io/<owner>/radarr:latest`
+- `ghcr.io/<owner>/radarr:latest-bin1`
+
 ## Tests
 
 Tests ciblés du patch recycle bin :

@@ -1,0 +1,37 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: Optional upstream tag override
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BASE_BRANCH: develop
+  UPSTREAM_REPOSITORY: Radarr/Radarr
+  FORK_SUFFIX: bin1
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run upstream sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_TAG_OVERRIDE: ${{ inputs.upstream_tag }}
+        run: bash .github/scripts/sync-upstream.sh
