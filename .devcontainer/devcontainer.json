@@ -18,6 +18,7 @@
   "initializeCommand": "bash ${localWorkspaceFolder}/.devcontainer/initializeCommand.sh",
   "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/postCreateCommand.sh ${containerWorkspaceFolder}",
   "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/node:2": {
       "nodeGypDependencies": true,
       "version": "20.11.1"

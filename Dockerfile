@@ -6,8 +6,7 @@ WORKDIR /src
 
 COPY . .
 
-RUN npm install --global yarn@1.22.19 && \
-    yarn --version && \
+RUN yarn --version && \
     yarn install --frozen-lockfile --network-timeout 120000 && \
     yarn build
 
