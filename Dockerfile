@@ -1,6 +1,17 @@
 # syntax=docker/dockerfile:1.7
 
-FROM mcr.microsoft.com/devcontainers/dotnet:1-8.0 AS build
+FROM node:20.11.1-bookworm-slim AS frontend-build
+
+WORKDIR /src
+
+COPY . .
+
+RUN npm install --global yarn@1.22.19 && \
+    yarn --version && \
+    yarn install --frozen-lockfile --network-timeout 120000 && \
+    yarn build
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
 
 ARG TARGETARCH
 ARG RADARR_VERSION
@@ -11,27 +22,14 @@ ARG PACKAGE_UPDATE_MESSAGE="Updates are published from this fork's GitHub Action
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN set -eux; \
-    rm -f /etc/apt/sources.list.d/yarn.list; \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \
       ffmpeg \
       git \
-      gnupg \
       jq \
-      sqlite3; \
-    install -d -m 0755 /etc/apt/keyrings; \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg; \
-    chmod a+r /etc/apt/keyrings/nodesource.gpg; \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends nodejs; \
-    npm install --global yarn@1.22.19; \
-    node --version; \
-    npm --version; \
-    yarn --version; \
+      sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -45,7 +43,9 @@ RUN case "${TARGETARCH}" in \
       *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac && \
     export RADARRVERSION="${RADARR_VERSION}" && \
-    ./build.sh --backend --frontend --packages -r "${RID}" -f net8.0
+    ./build.sh --backend -r "${RID}" -f net8.0
+
+COPY --from=frontend-build /src/_output/UI /src/_output/UI
 
 RUN case "${TARGETARCH}" in \
       amd64) export RID="linux-x64" ;; \
@@ -53,6 +53,8 @@ RUN case "${TARGETARCH}" in \
       arm) export RID="linux-arm" ;; \
       *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac && \
+    export RADARRVERSION="${RADARR_VERSION}" && \
+    ./build.sh --packages -r "${RID}" -f net8.0 && \
     mkdir -p /out/bin && \
     cp -a "_artifacts/${RID}/net8.0/Radarr/." /out/bin/ && \
     cat > /out/package_info <<EOF
