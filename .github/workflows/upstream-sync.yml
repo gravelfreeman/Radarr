@@ -5,6 +5,21 @@ on:
     - cron: '17 */6 * * *'
   workflow_dispatch:
     inputs:
+      base_branch:
+        description: Branch that carries the fork-specific recycle bin changes
+        required: false
+        default: feat/recycle-bin-per-root-folder
+        type: string
+      fork_suffix:
+        description: Suffix appended to published fork tags
+        required: false
+        default: bin1
+        type: string
+      upstream_repository:
+        description: Upstream repository to sync from
+        required: false
+        default: Radarr/Radarr
+        type: string
       upstream_tag:
         description: Optional upstream tag override
         required: false
@@ -14,24 +29,34 @@ permissions:
   contents: write
   pull-requests: write
 
-env:
-  BASE_BRANCH: develop
-  UPSTREAM_REPOSITORY: Radarr/Radarr
-  FORK_SUFFIX: bin1
-
 jobs:
   sync:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.base_branch || 'feat/recycle-bin-per-root-folder' }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve workflow config
+        id: config
+        env:
+          INPUT_BASE_BRANCH: ${{ github.event.inputs.base_branch }}
+          INPUT_FORK_SUFFIX: ${{ github.event.inputs.fork_suffix }}
+          INPUT_UPSTREAM_REPOSITORY: ${{ github.event.inputs.upstream_repository }}
+        run: |
+          echo "base_branch=${INPUT_BASE_BRANCH:-feat/recycle-bin-per-root-folder}" >> "${GITHUB_OUTPUT}"
+          echo "fork_suffix=${INPUT_FORK_SUFFIX:-bin1}" >> "${GITHUB_OUTPUT}"
+          echo "upstream_repository=${INPUT_UPSTREAM_REPOSITORY:-Radarr/Radarr}" >> "${GITHUB_OUTPUT}"
 
       - name: Run upstream sync
         env:
+          BASE_BRANCH: ${{ steps.config.outputs.base_branch }}
+          FORK_SUFFIX: ${{ steps.config.outputs.fork_suffix }}
+          UPSTREAM_REPOSITORY: ${{ steps.config.outputs.upstream_repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPSTREAM_TAG_OVERRIDE: ${{ inputs.upstream_tag }}
+          UPSTREAM_TAG_OVERRIDE: ${{ github.event.inputs.upstream_tag }}
         run: bash .github/scripts/sync-upstream.sh

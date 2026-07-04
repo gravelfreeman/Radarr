@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
+FROM mcr.microsoft.com/devcontainers/dotnet:1-8.0 AS build
 
 ARG TARGETARCH
 ARG RADARR_VERSION
@@ -11,17 +11,28 @@ ARG PACKAGE_UPDATE_MESSAGE="Updates are published from this fork's GitHub Action
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && \
+RUN set -eux; \
+    rm -f /etc/apt/sources.list.d/yarn.list; \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \
       ffmpeg \
       git \
+      gnupg \
       jq \
-      sqlite3 && \
+      sqlite3; \
+    install -d -m 0755 /etc/apt/keyrings; \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg; \
+    chmod a+r /etc/apt/keyrings/nodesource.gpg; \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends nodejs; \
+    npm install --global yarn@1.22.19; \
+    node --version; \
+    npm --version; \
+    yarn --version; \
     rm -rf /var/lib/apt/lists/*
-
-RUN corepack enable && corepack prepare yarn@1.22.22 --activate
 
 WORKDIR /src
 

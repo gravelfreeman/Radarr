@@ -62,7 +62,7 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             Subject.UpgradeMovieFile(_movieFile, _localMovie);
 
-            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(It.IsAny<string>(), It.IsAny<string>(), RecycleBinOperation.Upgrade), Times.Once());
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RecycleBinOperation>()), Times.Once());
         }
 
         [Test]
@@ -86,8 +86,8 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             Subject.UpgradeMovieFile(_movieFile, _localMovie);
 
-            Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_localMovie.Movie.MovieFile, DeleteMediaFileReason.Upgrade), Times.Once());
             ExceptionVerification.ExpectedWarns(1);
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_localMovie.Movie.MovieFile, DeleteMediaFileReason.Upgrade), Times.Once());
         }
 
         [Test]
@@ -101,8 +101,8 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             Subject.UpgradeMovieFile(_movieFile, _localMovie);
 
-            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RecycleBinOperation>()), Times.Never());
             ExceptionVerification.ExpectedWarns(1);
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RecycleBinOperation>()), Times.Never());
         }
 
         [Test]

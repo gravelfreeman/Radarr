@@ -3,16 +3,23 @@ name: Docker Publish
 on:
   push:
     branches:
-      - develop
+      - feat/recycle-bin-per-root-folder
   workflow_dispatch:
+    inputs:
+      base_branch:
+        description: Branch to publish from GHCR
+        required: false
+        default: feat/recycle-bin-per-root-folder
+        type: string
+      fork_suffix:
+        description: Suffix appended to published fork tags
+        required: false
+        default: bin1
+        type: string
 
 permissions:
   contents: write
   packages: write
-
-env:
-  BASE_BRANCH: develop
-  FORK_SUFFIX: bin1
 
 jobs:
   publish:
@@ -20,30 +27,40 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.base_branch || github.ref_name || 'feat/recycle-bin-per-root-folder' }}
+
+      - name: Resolve workflow config
+        id: config
+        env:
+          INPUT_BASE_BRANCH: ${{ github.event.inputs.base_branch }}
+          INPUT_FORK_SUFFIX: ${{ github.event.inputs.fork_suffix }}
+        run: |
+          echo "base_branch=${INPUT_BASE_BRANCH:-feat/recycle-bin-per-root-folder}" >> "${GITHUB_OUTPUT}"
+          echo "fork_suffix=${INPUT_FORK_SUFFIX:-bin1}" >> "${GITHUB_OUTPUT}"
 
       - name: Resolve version metadata
         id: version
-        run: bash .github/scripts/resolve-fork-version.sh "${FORK_SUFFIX}"
+        run: bash .github/scripts/resolve-fork-version.sh "${{ steps.config.outputs.fork_suffix }}"
 
       - name: Resolve image name
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "${GITHUB_OUTPUT}"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -53,12 +70,12 @@ jobs:
             RADARR_VERSION=${{ steps.version.outputs.release_version }}
             PACKAGE_VERSION=${{ steps.version.outputs.image_version }}
             PACKAGE_AUTHOR=${{ github.repository }}
-            PACKAGE_BRANCH=${{ env.BASE_BRANCH }}
+            PACKAGE_BRANCH=${{ steps.config.outputs.base_branch }}
             PACKAGE_UPDATE_MESSAGE=Update this container by pulling a newer ghcr.io image from this fork.
           tags: |
             ${{ steps.image.outputs.name }}:${{ steps.version.outputs.image_version }}
             ${{ steps.image.outputs.name }}:latest
-            ${{ steps.image.outputs.name }}:latest-${{ env.FORK_SUFFIX }}
+            ${{ steps.image.outputs.name }}:latest-${{ steps.config.outputs.fork_suffix }}
 
       - name: Create fork version tag
         env:
