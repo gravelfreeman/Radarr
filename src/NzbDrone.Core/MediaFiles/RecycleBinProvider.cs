@@ -24,7 +24,6 @@ namespace NzbDrone.Core.MediaFiles
 
     public class RecycleBinProvider : IExecute<CleanUpRecycleBinCommand>, IRecycleBinProvider
     {
-        private const string RecycleBinFolder = ".bin";
         private readonly IDiskTransferService _diskTransferService;
         private readonly IDiskProvider _diskProvider;
         private readonly IConfigService _configService;
@@ -56,9 +55,17 @@ namespace NzbDrone.Core.MediaFiles
             }
             else
             {
-                var recyclingBin = GetRecycleBin(path);
-                var destination = Path.Combine(recyclingBin, new DirectoryInfo(path).Name);
+                var destination = GetRecycleBinDestination(path);
 
+                if (destination.IsNullOrWhiteSpace())
+                {
+                    throw new RecycleBinException($"Unable to determine the recycling bin destination for folder '{path}'");
+                }
+
+                var destinationParent = new DirectoryInfo(destination).Parent.FullName;
+
+                _logger.Debug("Creating folder {0}", destinationParent);
+                _diskProvider.CreateFolder(destinationParent);
                 _logger.Debug("Moving '{0}' to '{1}'", path, destination);
                 _diskTransferService.TransferFolder(path, destination, TransferMode.Move);
 
@@ -93,10 +100,15 @@ namespace NzbDrone.Core.MediaFiles
             }
             else
             {
-                var recyclingBin = GetRecycleBin(path);
                 var fileInfo = new FileInfo(path);
-                var destinationFolder = Path.Combine(recyclingBin, subfolder);
-                var destination = Path.Combine(destinationFolder, fileInfo.Name);
+                var destination = GetRecycleBinDestination(path);
+
+                if (destination.IsNullOrWhiteSpace())
+                {
+                    throw new RecycleBinException($"Unable to determine the recycling bin destination for file '{path}'");
+                }
+
+                var destinationFolder = new FileInfo(destination).Directory.FullName;
 
                 try
                 {
@@ -232,7 +244,17 @@ namespace NzbDrone.Core.MediaFiles
                 return null;
             }
 
-            return Path.Combine(rootFolder.Path, RecycleBinFolder);
+            return RecycleBinPathBuilder.GetRecycleBinPath(path);
+        }
+
+        private string GetRecycleBinDestination(string path)
+        {
+            if (GetRecycleBin(path).IsNullOrWhiteSpace())
+            {
+                return null;
+            }
+
+            return RecycleBinPathBuilder.GetRecycleBinDestination(path);
         }
 
         private bool ShouldUseRecycleBin(string path, RecycleBinOperation operation)
@@ -262,7 +284,8 @@ namespace NzbDrone.Core.MediaFiles
         {
             return _rootFolderService.All()
                                      .Where(r => r.RecycleBinEnabled)
-                                     .Select(r => Path.Combine(r.Path, RecycleBinFolder))
+                                     .Select(r => RecycleBinPathBuilder.GetRecycleBinDestination(r.Path))
+                                     .Where(r => r.IsNotNullOrWhiteSpace())
                                      .Distinct(PathEqualityComparer.Instance)
                                      .ToArray();
         }

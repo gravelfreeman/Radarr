@@ -17,7 +17,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
     public class CleanupFixture : CoreTest
     {
         private readonly string _rootFolder = @"C:\Test\Movies".AsOsAgnostic();
-        private readonly string _recycleBin = Path.Combine(@"C:\Test\Movies".AsOsAgnostic(), ".bin");
+        private readonly string _recycleBin = RecycleBinPathBuilder.GetRecycleBinDestination(@"C:\Test\Movies".AsOsAgnostic());
 
         private void WithExpired()
         {
@@ -106,6 +106,26 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().Cleanup();
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(It.IsAny<string>(), true), Times.Never());
+        }
+
+        [Test]
+        public void should_only_cleanup_enabled_root_folder_scope_when_recycle_bin_is_shared()
+        {
+            var enabledRootFolder = @"C:\Test\Movies\Enabled".AsOsAgnostic();
+            var disabledRootFolder = @"C:\Test\Movies\Disabled".AsOsAgnostic();
+            var enabledRecycleBin = RecycleBinPathBuilder.GetRecycleBinDestination(enabledRootFolder);
+            var disabledRecycleBin = RecycleBinPathBuilder.GetRecycleBinDestination(disabledRootFolder);
+
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(new List<RootFolder>
+            {
+                new RootFolder { Path = enabledRootFolder, RecycleBinEnabled = true },
+                new RootFolder { Path = disabledRootFolder, RecycleBinEnabled = false }
+            });
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(enabledRecycleBin, true), Times.Once());
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(disabledRecycleBin, true), Times.Never());
         }
     }
 }

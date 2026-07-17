@@ -14,6 +14,11 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
 
     public class DeleteDirectoryFixture : CoreTest
     {
+        private static string GetExpectedRecycleBinPath(string path)
+        {
+            return RecycleBinPathBuilder.GetRecycleBinDestination(path);
+        }
+
         private void WithRecycleBin()
         {
             Mocker.GetMock<IConfigService>().SetupGet(s => s.RecycleBinEnabled).Returns(true);
@@ -54,7 +59,26 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
             Mocker.GetMock<IDiskTransferService>()
-                  .Verify(v => v.TransferFolder(path, @"C:\Test\TV\.bin\30 Rock".AsOsAgnostic(), TransferMode.Move), Times.Once());
+                  .Verify(v => v.TransferFolder(path, GetExpectedRecycleBinPath(path), TransferMode.Move), Times.Once());
+        }
+
+        [Test]
+        public void should_move_folder_to_top_level_bin_and_preserve_path_relative_to_top_level_folder()
+        {
+            PosixOnly();
+            WithRecycleBin();
+            WithRecycleBinMode(RecycleBinMode.Both);
+
+            var path = "/media/library/movies/anime/Movie";
+            var expected = "/media/.bin/library/movies/anime/Movie";
+
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
+                  .Returns(new RootFolder { Path = "/media/library/movies/anime", RecycleBinEnabled = true });
+
+            Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
+
+            Mocker.GetMock<IDiskTransferService>()
+                  .Verify(v => v.TransferFolder(path, expected, TransferMode.Move), Times.Once());
         }
 
         [Test]
@@ -69,7 +93,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
-            Mocker.GetMock<IDiskProvider>().Verify(v => v.FolderSetLastWriteTime(@"C:\Test\TV\.bin\30 Rock".AsOsAgnostic(), It.IsAny<DateTime>()), Times.Once());
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.FolderSetLastWriteTime(GetExpectedRecycleBinPath(path), It.IsAny<DateTime>()), Times.Once());
         }
 
         [Test]
@@ -82,7 +106,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.GetMock<IRootFolderService>().Setup(s => s.GetBestRootFolder(path, null))
                   .Returns(new RootFolder { Path = @"C:\Test\TV".AsOsAgnostic(), RecycleBinEnabled = true });
 
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(@"C:\Test\TV\.bin\30 Rock".AsOsAgnostic(), true))
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(GetExpectedRecycleBinPath(path), true))
                                            .Returns(new[] { "File1", "File2", "File3" });
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
@@ -135,7 +159,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
             Mocker.GetMock<IDiskTransferService>()
-                  .Verify(v => v.TransferFolder(path, @"C:\Test\TV\.bin\30 Rock".AsOsAgnostic(), TransferMode.Move), Times.Once());
+                  .Verify(v => v.TransferFolder(path, GetExpectedRecycleBinPath(path), TransferMode.Move), Times.Once());
         }
     }
 }
