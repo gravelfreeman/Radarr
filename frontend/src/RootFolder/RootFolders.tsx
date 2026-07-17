@@ -39,7 +39,17 @@ const rootFolderColumns: Column[] = [
   },
 ];
 
-function RootFolders() {
+interface RootFoldersProps {
+  pendingRecycleBinChanges?: Record<number, boolean>;
+  onRecycleBinEnabledChange?: (
+    id: number,
+    recycleBinEnabled: boolean,
+    originalRecycleBinEnabled: boolean
+  ) => void;
+}
+
+function RootFolders(props: RootFoldersProps) {
+  const { pendingRecycleBinChanges = {}, onRecycleBinEnabledChange } = props;
   const { isFetching, isPopulated, error, items } = useSelector(
     createRootFoldersSelector()
   );
@@ -69,10 +79,15 @@ function RootFolders() {
               key={rootFolder.id}
               id={rootFolder.id}
               path={rootFolder.path}
-              recycleBinEnabled={rootFolder.recycleBinEnabled}
+              originalRecycleBinEnabled={rootFolder.recycleBinEnabled}
+              recycleBinEnabled={
+                pendingRecycleBinChanges[rootFolder.id] ??
+                rootFolder.recycleBinEnabled
+              }
               accessible={rootFolder.accessible}
               freeSpace={rootFolder.freeSpace}
               unmappedFolders={rootFolder.unmappedFolders}
+              onRecycleBinEnabledChange={onRecycleBinEnabledChange}
             />
           );
         })}

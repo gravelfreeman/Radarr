@@ -8,10 +8,7 @@ import ConfirmModal from 'Components/Modal/ConfirmModal';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableRow from 'Components/Table/TableRow';
 import { icons, kinds } from 'Helpers/Props';
-import {
-  deleteRootFolder,
-  updateRootFolder,
-} from 'Store/Actions/rootFolderActions';
+import { deleteRootFolder } from 'Store/Actions/rootFolderActions';
 import { CheckInputChanged } from 'typings/inputs';
 import formatBytes from 'Utilities/Number/formatBytes';
 import translate from 'Utilities/String/translate';
@@ -20,20 +17,28 @@ import styles from './RootFolderRow.css';
 interface RootFolderRowProps {
   id: number;
   path: string;
+  originalRecycleBinEnabled: boolean;
   recycleBinEnabled: boolean;
   accessible: boolean;
   freeSpace?: number;
   unmappedFolders: object[];
+  onRecycleBinEnabledChange?: (
+    id: number,
+    recycleBinEnabled: boolean,
+    originalRecycleBinEnabled: boolean
+  ) => void;
 }
 
 function RootFolderRow(props: RootFolderRowProps) {
   const {
     id,
     path,
+    originalRecycleBinEnabled,
     recycleBinEnabled,
     accessible,
     freeSpace = 0,
     unmappedFolders = [],
+    onRecycleBinEnabledChange,
   } = props;
 
   const isUnavailable = !accessible;
@@ -56,11 +61,11 @@ function RootFolderRow(props: RootFolderRowProps) {
     setIsDeleteModalOpen(false);
   }, [dispatch, id]);
 
-  const onRecycleBinEnabledChange = useCallback(
+  const onRecycleBinEnabledInputChange = useCallback(
     ({ value }: CheckInputChanged) => {
-      dispatch(updateRootFolder({ id, recycleBinEnabled: value }));
+      onRecycleBinEnabledChange?.(id, value, originalRecycleBinEnabled);
     },
-    [dispatch, id]
+    [id, originalRecycleBinEnabled, onRecycleBinEnabledChange]
   );
 
   return (
@@ -95,7 +100,7 @@ function RootFolderRow(props: RootFolderRowProps) {
         <CheckInput
           name={`recycleBinEnabled-${id}`}
           value={recycleBinEnabled}
-          onChange={onRecycleBinEnabledChange}
+          onChange={onRecycleBinEnabledInputChange}
         />
       </TableRowCell>
 

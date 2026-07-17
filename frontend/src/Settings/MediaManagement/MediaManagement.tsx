@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import AppState from 'App/State/AppState';
 import Alert from 'Components/Alert';
@@ -22,6 +22,7 @@ import {
   saveNamingSettings,
   setMediaManagementSettingsValue,
 } from 'Store/Actions/settingsActions';
+import { updateRootFolder } from 'Store/Actions/rootFolderActions';
 import createSettingsSectionSelector from 'Store/Selectors/createSettingsSectionSelector';
 import useIsWindows from 'System/useIsWindows';
 import { InputChanged } from 'typings/inputs';
@@ -118,6 +119,9 @@ const recycleBinModeOptions: EnhancedSelectInputValue<string>[] = [
 
 function MediaManagement() {
   const dispatch = useDispatch();
+  const [rootFolderPendingChanges, setRootFolderPendingChanges] = useState<
+    Record<number, boolean>
+  >({});
   const showAdvancedSettings = useShowAdvancedSettings();
   const hasNamingPendingChanges = !isEmpty(
     useSelector((state: AppState) => state.settings.naming.pendingChanges)
@@ -138,7 +142,20 @@ function MediaManagement() {
   const handleSavePress = useCallback(() => {
     dispatch(saveMediaManagementSettings());
     dispatch(saveNamingSettings());
-  }, [dispatch]);
+
+    Object.entries(rootFolderPendingChanges).forEach(
+      ([id, recycleBinEnabled]) => {
+        dispatch(
+          updateRootFolder({
+            id: Number(id),
+            recycleBinEnabled,
+          })
+        );
+      }
+    );
+
+    setRootFolderPendingChanges({});
+  }, [dispatch, rootFolderPendingChanges]);
 
   const handleInputChange = useCallback(
     (change: InputChanged) => {
@@ -148,11 +165,33 @@ function MediaManagement() {
     [dispatch]
   );
 
+  const handleRootFolderRecycleBinChange = useCallback(
+    (
+      id: number,
+      recycleBinEnabled: boolean,
+      originalRecycleBinEnabled: boolean
+    ) => {
+      setRootFolderPendingChanges((pendingChanges) => {
+        const nextPendingChanges = { ...pendingChanges };
+
+        if (recycleBinEnabled === originalRecycleBinEnabled) {
+          delete nextPendingChanges[id];
+        } else {
+          nextPendingChanges[id] = recycleBinEnabled;
+        }
+
+        return nextPendingChanges;
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     dispatch(fetchMediaManagementSettings());
 
     return () => {
       dispatch(clearPendingChanges({ section: `settings.${SECTION}` }));
+      setRootFolderPendingChanges({});
     };
   }, [dispatch]);
 
@@ -160,7 +199,11 @@ function MediaManagement() {
     <PageContent title={translate('MediaManagementSettings')}>
       <SettingsToolbar
         isSaving={isSaving}
-        hasPendingChanges={hasNamingPendingChanges || hasPendingChanges}
+        hasPendingChanges={
+          hasNamingPendingChanges ||
+          hasPendingChanges ||
+          !isEmpty(rootFolderPendingChanges)
+        }
         onSavePress={handleSavePress}
       />
 
@@ -557,7 +600,10 @@ function MediaManagement() {
         ) : null}
 
         <FieldSet legend={translate('RootFolders')}>
-          <RootFolders />
+          <RootFolders
+            pendingRecycleBinChanges={rootFolderPendingChanges}
+            onRecycleBinEnabledChange={handleRootFolderRecycleBinChange}
+          />
           <AddRootFolder />
         </FieldSet>
       </PageContentBody>
