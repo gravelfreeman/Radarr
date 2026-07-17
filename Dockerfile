@@ -91,6 +91,7 @@ COPY --from=build /out/package_info /app/package_info
 COPY --from=build /out/bin /app/bin
 
 RUN mkdir -p /config /media && \
+    chmod 755 /app/bin/Radarr /app/bin/ffprobe && \
     chown -R radarr:radarr /app /config /media /home/radarr
 
 EXPOSE 7878

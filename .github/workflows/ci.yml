@@ -3,10 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - develop
-      - 'feat/**'
+      - main
+      - 'feature/**'
       - 'fix/**'
       - 'chore/**'
+      - 'sync/**'
   pull_request:
   workflow_dispatch:
 

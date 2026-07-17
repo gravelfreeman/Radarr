@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-suffix="${1:-bin1}"
+suffix="${1:-bin1.1}"
 
-upstream_tag="$(
-  git tag --merged HEAD --list 'v*' --sort=-v:refname |
-    grep -E '^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' |
-    head -n 1
-)"
+if [[ "${GITHUB_REF_TYPE:-}" == "tag" && "${GITHUB_REF_NAME:-}" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)-(.+)$ ]]; then
+  upstream_tag="${BASH_REMATCH[1]}"
+  suffix="${BASH_REMATCH[2]}"
+else
+  upstream_tag="$(
+    git tag --merged HEAD --list 'v*' --sort=-v:refname |
+      grep -E '^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' |
+      head -n 1
+  )"
+fi
 
 if [[ -z "${upstream_tag}" ]]; then
   echo "Unable to resolve merged upstream tag from current commit" >&2

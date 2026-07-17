@@ -3,7 +3,7 @@ set -euo pipefail
 
 base_branch="${BASE_BRANCH:?BASE_BRANCH is required}"
 upstream_repository="${UPSTREAM_REPOSITORY:?UPSTREAM_REPOSITORY is required}"
-fork_suffix="${FORK_SUFFIX:-bin1}"
+fork_suffix="${FORK_SUFFIX:-bin1.1}"
 latest_upstream_tag="${UPSTREAM_TAG_OVERRIDE:-}"
 
 git config user.name "github-actions[bot]"
@@ -32,8 +32,12 @@ fi
 
 latest_fork_tag="$(
   git tag -l "v*-${fork_suffix}" --sort=-v:refname |
-    grep -E "^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-${fork_suffix}$" |
-    head -n 1 || true
+    while IFS= read -r tag; do
+      if [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+- && "${tag##*-}" == "${fork_suffix}" ]]; then
+        echo "${tag}"
+        break
+      fi
+    done
 )"
 
 latest_fork_upstream="${latest_fork_tag%-${fork_suffix}}"
@@ -43,24 +47,19 @@ current_base_upstream_tag="$(
     head -n 1 || true
 )"
 sync_branch="sync/upstream-${latest_upstream_tag}"
+remote_sync_ref="refs/remotes/origin/${sync_branch}"
 
 echo "Latest upstream tag: ${latest_upstream_tag}"
 echo "Latest fork tag: ${latest_fork_tag:-<none>}"
 echo "Current base upstream tag: ${current_base_upstream_tag:-<none>}"
-
-if [[ "${latest_fork_upstream}" == "${latest_upstream_tag}" ]]; then
-  echo "Fork already published for ${latest_upstream_tag}"
-  exit 0
-fi
 
 if [[ "${current_base_upstream_tag}" == "${latest_upstream_tag}" ]]; then
   echo "Base branch already includes ${latest_upstream_tag}"
   exit 0
 fi
 
-if git ls-remote --exit-code --heads origin "${sync_branch}" >/dev/null 2>&1; then
-  echo "Sync branch already exists: ${sync_branch}"
-  exit 0
+if [[ "${latest_fork_upstream}" == "${latest_upstream_tag}" ]]; then
+  echo "Fork tag already exists for ${latest_upstream_tag}; continuing because base branch is not synced yet"
 fi
 
 existing_pr="$(
@@ -77,15 +76,9 @@ if [[ -n "${existing_pr}" ]]; then
   exit 0
 fi
 
-git checkout -B "${sync_branch}" "origin/${base_branch}"
-
-merge_message="merge: upstream ${latest_upstream_tag}"
-manual_title="chore: manual upstream sync ${latest_upstream_tag}"
-auto_title="chore: sync upstream ${latest_upstream_tag}"
-
-if git merge --no-ff "refs/tags/${latest_upstream_tag}" -m "${merge_message}"; then
-  git push origin "${sync_branch}"
-
+create_auto_pr()
+{
+  local pr_body
   pr_body=$(cat <<EOF
 Automated upstream sync for \`${latest_upstream_tag}\`.
 
@@ -98,6 +91,7 @@ If CI is green, auto-merge is enabled.
 EOF
 )
 
+  local pr_url
   pr_url="$(
     gh pr create \
       --base "${base_branch}" \
@@ -107,19 +101,13 @@ EOF
   )"
 
   gh pr merge "${pr_url}" --auto --merge || true
-  exit 0
-fi
+}
 
-conflict_files="$(
-  git diff --name-only --diff-filter=U || true
-)"
-
-git merge --abort || true
-git checkout -B "${sync_branch}" "origin/${base_branch}"
-git commit --allow-empty -m "${manual_title}"
-git push origin "${sync_branch}"
-
-pr_body=$(cat <<EOF
+create_manual_pr()
+{
+  local conflict_files="${1:-Unable to resolve conflict file list}"
+  local pr_body
+  pr_body=$(cat <<EOF
 Automated upstream sync for \`${latest_upstream_tag}\` could not be merged cleanly.
 
 - upstream repository: \`${upstream_repository}\`
@@ -144,9 +132,48 @@ Recommended manual flow:
 EOF
 )
 
-gh pr create \
-  --base "${base_branch}" \
-  --head "${sync_branch}" \
-  --title "${manual_title}" \
-  --body "${pr_body}" \
-  --draft
+  gh pr create \
+    --base "${base_branch}" \
+    --head "${sync_branch}" \
+    --title "${manual_title}" \
+    --body "${pr_body}" \
+    --draft
+}
+
+git checkout -B "${sync_branch}" "origin/${base_branch}"
+
+merge_message="merge: upstream ${latest_upstream_tag}"
+manual_title="chore: manual upstream sync ${latest_upstream_tag}"
+auto_title="chore: sync upstream ${latest_upstream_tag}"
+
+if git ls-remote --exit-code --heads origin "${sync_branch}" >/dev/null 2>&1; then
+  echo "Sync branch already exists: ${sync_branch}"
+  git fetch origin "+refs/heads/${sync_branch}:${remote_sync_ref}"
+
+  if git merge-base --is-ancestor "refs/tags/${latest_upstream_tag}" "${remote_sync_ref}"; then
+    echo "Existing sync branch contains ${latest_upstream_tag}; creating missing PR"
+    create_auto_pr
+    exit 0
+  fi
+
+  echo "Existing sync branch does not contain ${latest_upstream_tag}; creating manual PR"
+  create_manual_pr "Existing sync branch ${sync_branch} does not contain ${latest_upstream_tag}."
+  exit 0
+fi
+
+if git merge --no-ff "refs/tags/${latest_upstream_tag}" -m "${merge_message}"; then
+  git push origin "${sync_branch}"
+  create_auto_pr
+  exit 0
+fi
+
+conflict_files="$(
+  git diff --name-only --diff-filter=U || true
+)"
+
+git merge --abort || true
+git checkout -B "${sync_branch}" "origin/${base_branch}"
+git commit --allow-empty -m "${manual_title}"
+git push origin "${sync_branch}"
+
+create_manual_pr "${conflict_files}"
