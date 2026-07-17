@@ -1,8 +1,11 @@
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
+using NzbDrone.Common;
 using NzbDrone.Common.Disk;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Localization;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.RootFolders;
 
@@ -31,15 +34,16 @@ namespace NzbDrone.Core.HealthCheck.Checks
                 return new HealthCheck(GetType());
             }
 
-            foreach (var rootFolder in _rootFolderService.All())
-            {
-                if (!rootFolder.RecycleBinEnabled)
-                {
-                    continue;
-                }
+            var recycleBins = _rootFolderService.All()
+                                                .Where(r => r.RecycleBinEnabled)
+                                                .Select(r => RecycleBinPathBuilder.GetRecycleBinPath(r.Path))
+                                                .Where(r => r.IsNotNullOrWhiteSpace())
+                                                .Distinct(PathEqualityComparer.Instance);
 
-                var recycleBin = Path.Combine(rootFolder.Path, ".bin");
-                var folderToCheck = _diskProvider.FolderExists(recycleBin) ? recycleBin : rootFolder.Path;
+            foreach (var recycleBin in recycleBins)
+            {
+                var topLevelFolder = RecycleBinPathBuilder.GetTopLevelFolder(recycleBin);
+                var folderToCheck = _diskProvider.FolderExists(recycleBin) ? recycleBin : topLevelFolder;
 
                 if (!_diskProvider.FolderWritable(folderToCheck))
                 {

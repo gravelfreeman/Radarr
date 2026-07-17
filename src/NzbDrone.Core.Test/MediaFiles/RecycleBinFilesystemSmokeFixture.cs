@@ -16,6 +16,8 @@ namespace NzbDrone.Core.Test.MediaFiles
     [TestFixture]
     public class RecycleBinFilesystemSmokeFixture : TestBase
     {
+        private string TestRunFolder => Path.Combine(Path.GetTempPath(), "radarr-recycle-bin-smoke", Path.GetFileName(TempFolder));
+
         private sealed class TestMount : IMount
         {
             public long AvailableFreeSpace => 0;
@@ -71,13 +73,34 @@ namespace NzbDrone.Core.Test.MediaFiles
             }
         }
 
-        [Test]
-        public void should_move_deleted_movie_file_to_root_folder_bin()
+        [TearDown]
+        public void TearDown()
         {
-            var rootFolder = Path.Combine(TempFolder, "lib-delete");
+            if (Directory.Exists(TestRunFolder))
+            {
+                Directory.Delete(TestRunFolder, true);
+            }
+
+            var tempMirrorFolder = GetExpectedRecycleBinPath(TestRunFolder);
+
+            if (Directory.Exists(tempMirrorFolder))
+            {
+                Directory.Delete(tempMirrorFolder, true);
+            }
+        }
+
+        private static string GetExpectedRecycleBinPath(string path)
+        {
+            return RecycleBinPathBuilder.GetRecycleBinDestination(path);
+        }
+
+        [Test]
+        public void should_move_deleted_movie_file_to_top_level_bin()
+        {
+            var rootFolder = Path.Combine(TestRunFolder, "lib-delete");
             var movieFolder = Path.Combine(rootFolder, "Movie Delete");
             var sourceFile = Path.Combine(movieFolder, "Movie Delete (2025).mkv");
-            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Delete", "Movie Delete (2025).mkv");
+            var expectedRecycleBinFile = GetExpectedRecycleBinPath(sourceFile);
 
             Directory.CreateDirectory(movieFolder);
             File.WriteAllText(sourceFile, "delete-test");
@@ -101,12 +124,12 @@ namespace NzbDrone.Core.Test.MediaFiles
         }
 
         [Test]
-        public void should_move_manually_deleted_movie_file_to_root_folder_bin()
+        public void should_move_manually_deleted_movie_file_to_top_level_bin()
         {
-            var rootFolder = Path.Combine(TempFolder, "lib-manual-delete");
+            var rootFolder = Path.Combine(TestRunFolder, "lib-manual-delete");
             var movieFolder = Path.Combine(rootFolder, "Movie Manual Delete");
             var sourceFile = Path.Combine(movieFolder, "Movie Manual Delete (2026).mkv");
-            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Manual Delete", "Movie Manual Delete (2026).mkv");
+            var expectedRecycleBinFile = GetExpectedRecycleBinPath(sourceFile);
 
             Directory.CreateDirectory(movieFolder);
             File.WriteAllText(sourceFile, "manual-delete-test");
@@ -149,12 +172,12 @@ namespace NzbDrone.Core.Test.MediaFiles
         }
 
         [Test]
-        public void should_move_old_movie_file_to_root_folder_bin_on_upgrade()
+        public void should_move_old_movie_file_to_top_level_bin_on_upgrade()
         {
-            var rootFolder = Path.Combine(TempFolder, "lib-upgrade");
+            var rootFolder = Path.Combine(TestRunFolder, "lib-upgrade");
             var movieFolder = Path.Combine(rootFolder, "Movie Upgrade");
             var oldFile = Path.Combine(movieFolder, "Movie Upgrade (2024).mkv");
-            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Upgrade", "Movie Upgrade (2024).mkv");
+            var expectedRecycleBinFile = GetExpectedRecycleBinPath(oldFile);
 
             Directory.CreateDirectory(movieFolder);
             File.WriteAllText(oldFile, "old-file");
@@ -214,10 +237,10 @@ namespace NzbDrone.Core.Test.MediaFiles
         [Test]
         public void should_delete_manually_deleted_movie_file_permanently_when_mode_is_upgrades_only()
         {
-            var rootFolder = Path.Combine(TempFolder, "lib-manual-delete-upgrades-only");
+            var rootFolder = Path.Combine(TestRunFolder, "lib-manual-delete-upgrades-only");
             var movieFolder = Path.Combine(rootFolder, "Movie Manual Delete");
             var sourceFile = Path.Combine(movieFolder, "Movie Manual Delete (2026).mkv");
-            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Manual Delete", "Movie Manual Delete (2026).mkv");
+            var expectedRecycleBinFile = GetExpectedRecycleBinPath(sourceFile);
 
             Directory.CreateDirectory(movieFolder);
             File.WriteAllText(sourceFile, "manual-delete-test");
@@ -262,10 +285,10 @@ namespace NzbDrone.Core.Test.MediaFiles
         [Test]
         public void should_delete_old_movie_file_permanently_on_upgrade_when_mode_is_deletes_only()
         {
-            var rootFolder = Path.Combine(TempFolder, "lib-upgrade-deletes-only");
+            var rootFolder = Path.Combine(TestRunFolder, "lib-upgrade-deletes-only");
             var movieFolder = Path.Combine(rootFolder, "Movie Upgrade");
             var oldFile = Path.Combine(movieFolder, "Movie Upgrade (2024).mkv");
-            var expectedRecycleBinFile = Path.Combine(rootFolder, ".bin", "Movie Upgrade", "Movie Upgrade (2024).mkv");
+            var expectedRecycleBinFile = GetExpectedRecycleBinPath(oldFile);
 
             Directory.CreateDirectory(movieFolder);
             File.WriteAllText(oldFile, "old-file");

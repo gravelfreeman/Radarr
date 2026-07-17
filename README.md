@@ -1,4 +1,4 @@
-# Radarr fork - per-root-folder recycle bin
+# Radarr fork - top-level shared recycle bin
 
 This fork changes Radarr's recycle bin behavior.
 
@@ -8,18 +8,20 @@ Fork goals:
 - keep a global enable toggle
 - add a global mode to choose whether the bin applies to upgrades, deletes, or both
 - add a per-root-folder toggle in `Settings > Media Management`
-- when the recycle bin is enabled, move deleted files into `.bin` under the matching root folder
+- when the recycle bin is enabled, move deleted files into `.bin` under the top-level folder while preserving the original path below it
 
 Example:
 
 - Radarr root folders:
-  - `/media/movies/lib1`
-  - `/media/movies/lib2`
-  - `/media/movies/lib3`
-- if a movie is deleted from `/media/movies/lib2/...`
-- then it is moved to `/media/movies/lib2/.bin/...`
+  - `/media/library/movies/anime`
+  - `/media/library/movies/comedy`
+  - `/requests/library/movies`
+- if a movie is deleted from `/media/library/movies/anime/Movie/file.mkv`
+- then it is moved to `/media/.bin/library/movies/anime/Movie/file.mkv`
+- if a movie is deleted from `/requests/library/movies/Movie/file.mkv`
+- then it is moved to `/requests/.bin/library/movies/Movie/file.mkv`
 
-The behavior does not depend on the Docker/Kubernetes mount itself. It depends on the Radarr root folder selected for the affected file.
+The per-root-folder toggle still controls whether a given library uses the recycle bin. The destination is shared at the first path segment, such as `/media/.bin` or `/requests/.bin`.
 
 ## Change Summary
 
@@ -33,8 +35,8 @@ After:
 - global `RecycleBinMode` chooses whether the bin applies to `Both`, `Upgrades Only`, or `Deletes Only`
 - each `RootFolder` also has its own `RecycleBinEnabled`
 - the bin is used only when the global toggle, global mode, and root folder toggle allow the current operation
-- the destination is computed automatically from the file's root folder
-- the final destination is `<root-folder>/.bin`
+- the destination is computed automatically from the source path's top-level folder
+- the final destination is `<top-level-folder>/.bin/<original-path-relative-to-top-level-folder>`
 
 Behavior rules:
 
@@ -144,10 +146,11 @@ Default port:
 | [src/Radarr.Api.V3/RootFolders/RootFolderController.cs](/workspaces/Radarr/src/Radarr.Api.V3/RootFolders/RootFolderController.cs) | Add root folder `PUT` support to change the toggle without touching the path |
 | [src/NzbDrone.Core/MediaFiles/RecycleBinMode.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinMode.cs) | Define the global `Both / UpgradesOnly / DeletesOnly` mode |
 | [src/NzbDrone.Core/MediaFiles/RecycleBinOperation.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinOperation.cs) | Explicitly distinguish `Delete` and `Upgrade` operations |
+| [src/NzbDrone.Core/MediaFiles/RecycleBinPathBuilder.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinPathBuilder.cs) | Compute shared top-level `.bin` paths and preserved relative destinations |
 | [src/NzbDrone.Core/MediaFiles/RecycleBinProvider.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinProvider.cs) | Apply the `global && mode && rootFolder` rule and handle delete/empty/cleanup |
 | [src/NzbDrone.Core/RootFolders/RootFolderService.cs](/workspaces/Radarr/src/NzbDrone.Core/RootFolders/RootFolderService.cs) | Exclude `.bin` from unmapped folders |
 | [src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs](/workspaces/Radarr/src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs) | Block paths pointing to `.bin` or one of its subfolders |
-| [src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs](/workspaces/Radarr/src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs) | Check write access to `.bin` only for enabled root folders |
+| [src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs](/workspaces/Radarr/src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs) | Check write access to each shared top-level `.bin` only for enabled root folders |
 | [src/NzbDrone.Core/Localization/Core/en.json](/workspaces/Radarr/src/NzbDrone.Core/Localization/Core/en.json) | Add labels/help text for the global mode |
 | [src/NzbDrone.Core/MediaFiles/UpgradeMediaFileService.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/UpgradeMediaFileService.cs) | Explicitly mark the operation as `Upgrade` |
 | [src/NzbDrone.Core/MediaFiles/MediaFileDeletionService.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/MediaFileDeletionService.cs) | Explicitly mark deletions as `Delete` |

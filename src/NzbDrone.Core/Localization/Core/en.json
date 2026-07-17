@@ -1577,7 +1577,7 @@
   "RecyclingBinCleanup": "Recycling Bin Cleanup",
   "RecyclingBinCleanupHelpText": "Set to 0 to disable automatic cleanup",
   "RecyclingBinCleanupHelpTextWarning": "Files in the recycle bin older than the selected number of days will be cleaned up automatically",
-  "RecyclingBinHelpText": "Movie files will be moved to .bin in the root folder when deleted instead of being permanently deleted",
+  "RecyclingBinHelpText": "Movie files will be moved to .bin under the top-level folder when deleted instead of being permanently deleted",
   "Reddit": "Reddit",
   "Refresh": "Refresh",
   "RefreshAndScan": "Refresh & Scan",
