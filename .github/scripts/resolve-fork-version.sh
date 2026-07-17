@@ -26,6 +26,7 @@ fork_tag="${upstream_tag}-${suffix}"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   {
     echo "upstream_tag=${upstream_tag}"
+    echo "suffix=${suffix}"
     echo "release_version=${release_version}"
     echo "image_version=${image_version}"
     echo "fork_tag=${fork_tag}"
@@ -33,6 +34,7 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
 else
   cat <<EOF
 upstream_tag=${upstream_tag}
+suffix=${suffix}
 release_version=${release_version}
 image_version=${image_version}
 fork_tag=${fork_tag}

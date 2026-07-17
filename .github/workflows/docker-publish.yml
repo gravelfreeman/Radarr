@@ -77,7 +77,7 @@ jobs:
           tags: |
             ${{ steps.image.outputs.name }}:${{ steps.version.outputs.image_version }}
             ${{ steps.image.outputs.name }}:latest
-            ${{ steps.image.outputs.name }}:latest-${{ steps.config.outputs.fork_suffix }}
+            ${{ steps.image.outputs.name }}:latest-${{ steps.version.outputs.suffix }}
 
       - name: Create fork version tag
         env:
