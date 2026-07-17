@@ -66,6 +66,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: mode=max
+          sbom: true
           build-args: |
             RADARR_VERSION=${{ steps.version.outputs.release_version }}
             PACKAGE_VERSION=${{ steps.version.outputs.image_version }}

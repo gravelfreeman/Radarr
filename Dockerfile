@@ -36,9 +36,9 @@ WORKDIR /src
 COPY . .
 
 RUN case "${TARGETARCH}" in \
-      amd64) export RID="linux-x64" ;; \
-      arm64) export RID="linux-arm64" ;; \
-      arm) export RID="linux-arm" ;; \
+      amd64) export RID="linux-musl-x64" ;; \
+      arm64) export RID="linux-musl-arm64" ;; \
+      arm) export RID="linux-musl-arm" ;; \
       *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac && \
     export RADARRVERSION="${RADARR_VERSION}" && \
@@ -47,15 +47,16 @@ RUN case "${TARGETARCH}" in \
 COPY --from=frontend-build /src/_output/UI /src/_output/UI
 
 RUN case "${TARGETARCH}" in \
-      amd64) export RID="linux-x64" ;; \
-      arm64) export RID="linux-arm64" ;; \
-      arm) export RID="linux-arm" ;; \
+      amd64) export RID="linux-musl-x64" ;; \
+      arm64) export RID="linux-musl-arm64" ;; \
+      arm) export RID="linux-musl-arm" ;; \
       *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac && \
     export RADARRVERSION="${RADARR_VERSION}" && \
     ./build.sh --packages -r "${RID}" -f net8.0 && \
     mkdir -p /out/bin && \
     cp -a "_artifacts/${RID}/net8.0/Radarr/." /out/bin/ && \
+    rm -rf /out/bin/Radarr.Update && \
     cat > /out/package_info <<EOF
 PackageVersion=${PACKAGE_VERSION}
 PackageAuthor=${PACKAGE_AUTHOR}
@@ -66,39 +67,40 @@ Branch=${PACKAGE_BRANCH}
 ReleaseVersion=${RADARR_VERSION}
 EOF
 
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim
+FROM docker.io/library/alpine:3.24
 
-ARG RADARR_UID=1000
-ARG RADARR_GID=1000
-
-ENV DEBIAN_FRONTEND=noninteractive \
+ENV DOTNET_EnableDiagnostics=0 \
     HOME=/tmp
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      ca-certificates \
-      libsqlite3-0 \
-      sqlite3 \
-      tzdata && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN groupadd --gid "${RADARR_GID}" radarr && \
-    useradd --uid "${RADARR_UID}" --gid "${RADARR_GID}" --create-home --home-dir /home/radarr --shell /usr/sbin/nologin radarr
-
 WORKDIR /app
+
+RUN apk add --no-cache \
+      bash \
+      ca-certificates \
+      catatonit \
+      coreutils \
+      curl \
+      icu-libs \
+      jq \
+      libintl \
+      nano \
+      sqlite-libs \
+      tzdata && \
+    mkdir -p /app/bin /config
 
 COPY --from=build /out/package_info /app/package_info
 COPY --from=build /out/bin /app/bin
 
-RUN mkdir -p /config /media && \
-    chmod 755 /app/bin/Radarr /app/bin/ffprobe && \
-    chown -R radarr:radarr /app /config /media /home/radarr
+RUN chmod -R 755 /app && \
+    chown -R root:root /app && \
+    chown -R nobody:nogroup /config
 
 EXPOSE 7878
 
-VOLUME ["/config", "/media"]
+VOLUME ["/config"]
 
-USER radarr
+USER nobody:nogroup
+WORKDIR /config
 
-ENTRYPOINT ["/app/bin/Radarr"]
-CMD ["-nobrowser", "-data=/config"]
+ENTRYPOINT ["/usr/bin/catatonit", "--", "/app/bin/Radarr"]
+CMD ["--nobrowser", "--data=/config"]
