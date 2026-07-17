@@ -6,7 +6,7 @@ This fork keeps upstream Radarr updates separate from fork development and Docke
 
 - `master`: 1:1 upstream mirror of `Radarr/Radarr`. Do not add fork-specific code here.
 - `main`: fork stable branch. Contains upstream Radarr plus this fork's custom changes, Dockerfile, workflows, and release scripts.
-- `feature/*`: development branches. Use these for all work in progress. Never publish Docker images from these branches.
+- `feat/*`: development branches. Use these for all work in progress. Never publish Docker images from these branches.
 - `sync/upstream-v*`: temporary upstream integration branches. Automation merges a new upstream tag into `main` through these branches and opens a PR.
 
 ## Workflow Rules
@@ -46,5 +46,5 @@ Examples:
 ## Agent Notes
 
 - Keep `.github/workflows/*`, `.github/scripts/*`, and `Dockerfile` on `main`; they are part of the fork's stable operating model.
-- Feature branches may edit workflows or Docker files, but those changes become active only after merging to `main`.
+- `feat/*` branches may edit workflows or Docker files, but those changes become active only after merging to `main`.
 - Avoid renaming branches or changing publish triggers without also updating this file and the workflow defaults.
