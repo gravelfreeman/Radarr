@@ -50,6 +50,12 @@ jobs:
           echo "base_branch=${INPUT_BASE_BRANCH:-main}" >> "${GITHUB_OUTPUT}"
           echo "fork_suffix=${INPUT_FORK_SUFFIX:-auto}" >> "${GITHUB_OUTPUT}"
 
+      - name: Fetch upstream tags
+        run: |
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream https://github.com/Radarr/Radarr.git
+          git fetch upstream --tags
+
       - name: Resolve version metadata
         id: version
         run: bash .github/scripts/resolve-fork-version.sh "${{ steps.config.outputs.fork_suffix }}"
