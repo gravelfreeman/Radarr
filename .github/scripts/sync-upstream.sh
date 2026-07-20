@@ -5,6 +5,7 @@ base_branch="${BASE_BRANCH:?BASE_BRANCH is required}"
 upstream_repository="${UPSTREAM_REPOSITORY:?UPSTREAM_REPOSITORY is required}"
 fork_suffix="${FORK_SUFFIX:-auto}"
 latest_upstream_tag="${UPSTREAM_TAG_OVERRIDE:-}"
+github_repository="${GITHUB_REPOSITORY:-}"
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -28,6 +29,13 @@ fi
 if [[ -z "${latest_upstream_tag}" ]]; then
   echo "Unable to resolve latest upstream tag" >&2
   exit 1
+fi
+
+if [[ -z "${github_repository}" ]]; then
+  github_repository="$(
+    git remote get-url origin |
+      sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##'
+  )"
 fi
 
 latest_fork_tag_for_suffix()
@@ -118,11 +126,11 @@ EOF
 
   local pr_url
   pr_url="$(
-    gh pr create \
-      --base "${base_branch}" \
-      --head "${sync_branch}" \
-      --title "${auto_title}" \
-      --body "${pr_body}"
+    create_pr \
+      "${base_branch}" \
+      "${sync_branch}" \
+      "${auto_title}" \
+      "${pr_body}"
   )"
 
   gh pr merge "${pr_url}" --auto --merge || true
@@ -157,12 +165,31 @@ Recommended manual flow:
 EOF
 )
 
-  gh pr create \
-    --base "${base_branch}" \
-    --head "${sync_branch}" \
-    --title "${manual_title}" \
-    --body "${pr_body}" \
-    --draft
+  create_pr \
+    "${base_branch}" \
+    "${sync_branch}" \
+    "${manual_title}" \
+    "${pr_body}" \
+    true
+}
+
+create_pr()
+{
+  local base="${1:?base branch is required}"
+  local head="${2:?head branch is required}"
+  local title="${3:?title is required}"
+  local body="${4:?body is required}"
+  local draft="${5:-false}"
+
+  gh api \
+    --method POST \
+    "repos/${github_repository}/pulls" \
+    --raw-field "base=${base}" \
+    --raw-field "head=${head}" \
+    --raw-field "title=${title}" \
+    --raw-field "body=${body}" \
+    --field "draft=${draft}" \
+    --jq '.html_url'
 }
 
 git checkout -B "${sync_branch}" "origin/${base_branch}"
