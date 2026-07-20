@@ -10,11 +10,12 @@ namespace NzbDrone.Core.CustomFormats
     {
         public QualityModifierSpecificationValidator()
         {
-            RuleFor(c => c.Value).Custom((value, context) =>
+            RuleFor(c => c.Value).NotEmpty();
+            RuleFor(c => c.Value).Custom((qualityValue, context) =>
             {
-                if (!Enum.IsDefined(typeof(Modifier), value))
+                if (!Enum.IsDefined(typeof(Modifier), qualityValue))
                 {
-                    context.AddFailure($"Invalid quality modifier condition value: {value}");
+                    context.AddFailure(string.Format("Invalid quality modifier condition value: {0}", qualityValue));
                 }
             });
         }
@@ -22,7 +23,7 @@ namespace NzbDrone.Core.CustomFormats
 
     public class QualityModifierSpecification : CustomFormatSpecificationBase
     {
-        private static readonly QualityModifierSpecificationValidator Validator = new();
+        private static readonly QualityModifierSpecificationValidator Validator = new QualityModifierSpecificationValidator();
 
         public override int Order => 7;
         public override string ImplementationName => "Quality Modifier";

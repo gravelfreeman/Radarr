@@ -50,7 +50,7 @@ namespace NzbDrone.Core.ImportLists.Trakt.Popular
                 {
                     Title = movie.Title,
                     ImdbId = movie.Ids.Imdb,
-                    TmdbId = movie.Ids.Tmdb ?? 0,
+                    TmdbId = movie.Ids.Tmdb,
                     Year = movie.Year ?? 0
                 });
             }
