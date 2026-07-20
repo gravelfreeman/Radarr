@@ -108,3 +108,9 @@ jobs:
 
           git tag "${FORK_TAG}"
           git push origin "${FORK_TAG}"
+
+      - name: Delete merged sync branch
+        if: github.event_name == 'pull_request'
+        env:
+          SYNC_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: git push origin --delete "${SYNC_BRANCH}"
