@@ -14,7 +14,7 @@ This fork keeps upstream Radarr updates separate from fork development and Docke
 - Do not make Radarr application/source changes directly on `main` except for emergency fixes.
 - GitHub workflow, release automation, Docker publishing, and repository operating-model changes may be made directly on `main` because they define how the fork is maintained.
 - Do not publish Docker images from branch pushes.
-- Docker publishing should happen only from fork release tags such as `v6.3.0.10514-bin1.1`, or by explicit manual workflow dispatch.
+- Docker publishing should happen only from fork release tags such as `v6.3.0.10514-bin1.1`, by explicit manual workflow dispatch, or after a `sync/upstream-v*` PR is merged into `main`.
 - Scheduled upstream sync should target `main` by default.
 - Upstream sync must create or update `sync/upstream-v*` and open a PR into `main`; it must not silently succeed just because the sync branch already exists.
 
@@ -25,8 +25,8 @@ This fork keeps upstream Radarr updates separate from fork development and Docke
 3. The upstream tag is merged into that sync branch.
 4. A PR is opened from `sync/upstream-v6.3.0.10514` to `main`.
 5. CI must pass before merging.
-6. After merge, create a fork tag such as `v6.3.0.10514-bin1.1`.
-7. Docker publish builds and pushes from that tag.
+6. After merge, Docker publish builds from `main` and creates a fork tag such as `v6.3.0.10514-bin1.1`.
+7. If the automatic publish does not run, manually dispatch Docker publish or push the fork tag.
 
 ## Expected Image Tags
 
