@@ -12,9 +12,9 @@ on:
         default: main
         type: string
       fork_suffix:
-        description: Suffix appended to published fork tags
+        description: Suffix appended to published fork tags; auto resolves the next fork-only suffix when needed
         required: false
-        default: bin1.1
+        default: auto
         type: string
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
           INPUT_FORK_SUFFIX: ${{ github.event.inputs.fork_suffix }}
         run: |
           echo "base_branch=${INPUT_BASE_BRANCH:-main}" >> "${GITHUB_OUTPUT}"
-          echo "fork_suffix=${INPUT_FORK_SUFFIX:-bin1.1}" >> "${GITHUB_OUTPUT}"
+          echo "fork_suffix=${INPUT_FORK_SUFFIX:-auto}" >> "${GITHUB_OUTPUT}"
 
       - name: Resolve version metadata
         id: version

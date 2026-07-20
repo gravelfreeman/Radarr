@@ -11,9 +11,9 @@ on:
         default: main
         type: string
       fork_suffix:
-        description: Suffix appended to published fork tags
+        description: Suffix appended to published fork tags; auto keeps the latest fork suffix
         required: false
-        default: bin1.1
+        default: auto
         type: string
       upstream_repository:
         description: Upstream repository to sync from
@@ -49,7 +49,7 @@ jobs:
           INPUT_UPSTREAM_REPOSITORY: ${{ github.event.inputs.upstream_repository }}
         run: |
           echo "base_branch=${INPUT_BASE_BRANCH:-main}" >> "${GITHUB_OUTPUT}"
-          echo "fork_suffix=${INPUT_FORK_SUFFIX:-bin1.1}" >> "${GITHUB_OUTPUT}"
+          echo "fork_suffix=${INPUT_FORK_SUFFIX:-auto}" >> "${GITHUB_OUTPUT}"
           echo "upstream_repository=${INPUT_UPSTREAM_REPOSITORY:-Radarr/Radarr}" >> "${GITHUB_OUTPUT}"
 
       - name: Run upstream sync

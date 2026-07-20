@@ -3,7 +3,7 @@ set -euo pipefail
 
 base_branch="${BASE_BRANCH:?BASE_BRANCH is required}"
 upstream_repository="${UPSTREAM_REPOSITORY:?UPSTREAM_REPOSITORY is required}"
-fork_suffix="${FORK_SUFFIX:-bin1.1}"
+fork_suffix="${FORK_SUFFIX:-auto}"
 latest_upstream_tag="${UPSTREAM_TAG_OVERRIDE:-}"
 
 git config user.name "github-actions[bot]"
@@ -30,15 +30,40 @@ if [[ -z "${latest_upstream_tag}" ]]; then
   exit 1
 fi
 
-latest_fork_tag="$(
-  git tag -l "v*-${fork_suffix}" --sort=-v:refname |
+latest_fork_tag_for_suffix()
+{
+  local suffix="${1:?suffix is required}"
+
+  git tag -l "v*-${suffix}" --sort=-v:refname |
     while IFS= read -r tag; do
-      if [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+- && "${tag##*-}" == "${fork_suffix}" ]]; then
+      if [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+- && "${tag##*-}" == "${suffix}" ]]; then
         echo "${tag}"
         break
       fi
     done
-)"
+}
+
+latest_fork_tag_any_suffix()
+{
+  git tag -l 'v*-bin*' --sort=-v:refname |
+    while IFS= read -r tag; do
+      if [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-bin[0-9]+(\.[0-9]+)?$ ]]; then
+        echo "${tag}"
+        break
+      fi
+    done
+}
+
+if [[ -z "${fork_suffix}" || "${fork_suffix}" == "auto" ]]; then
+  latest_fork_tag="$(latest_fork_tag_any_suffix)"
+  if [[ -n "${latest_fork_tag}" ]]; then
+    fork_suffix="${latest_fork_tag##*-}"
+  else
+    fork_suffix="bin1.1"
+  fi
+else
+  latest_fork_tag="$(latest_fork_tag_for_suffix "${fork_suffix}")"
+fi
 
 latest_fork_upstream="${latest_fork_tag%-${fork_suffix}}"
 current_base_upstream_tag="$(
