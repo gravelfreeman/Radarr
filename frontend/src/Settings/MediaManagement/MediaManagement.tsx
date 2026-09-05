@@ -16,13 +16,13 @@ import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import RootFolders from 'RootFolder/RootFolders';
 import SettingsToolbar from 'Settings/SettingsToolbar';
 import { clearPendingChanges } from 'Store/Actions/baseActions';
+import { updateRootFolder } from 'Store/Actions/rootFolderActions';
 import {
   fetchMediaManagementSettings,
   saveMediaManagementSettings,
   saveNamingSettings,
   setMediaManagementSettingsValue,
 } from 'Store/Actions/settingsActions';
-import { updateRootFolder } from 'Store/Actions/rootFolderActions';
 import createSettingsSectionSelector from 'Store/Selectors/createSettingsSectionSelector';
 import useIsWindows from 'System/useIsWindows';
 import { InputChanged } from 'typings/inputs';
@@ -144,11 +144,11 @@ function MediaManagement() {
     dispatch(saveNamingSettings());
 
     Object.entries(rootFolderPendingChanges).forEach(
-      ([id, recycleBinEnabled]) => {
+      ([id, recycleBinEnabledPending]) => {
         dispatch(
           updateRootFolder({
             id: Number(id),
-            recycleBinEnabled,
+            recycleBinEnabled: recycleBinEnabledPending,
           })
         );
       }
@@ -168,16 +168,16 @@ function MediaManagement() {
   const handleRootFolderRecycleBinChange = useCallback(
     (
       id: number,
-      recycleBinEnabled: boolean,
-      originalRecycleBinEnabled: boolean
+      recycleBinEnabledPending: boolean,
+      recycleBinEnabled: boolean
     ) => {
       setRootFolderPendingChanges((pendingChanges) => {
         const nextPendingChanges = { ...pendingChanges };
 
-        if (recycleBinEnabled === originalRecycleBinEnabled) {
+        if (recycleBinEnabledPending === recycleBinEnabled) {
           delete nextPendingChanges[id];
         } else {
-          nextPendingChanges[id] = recycleBinEnabled;
+          nextPendingChanges[id] = recycleBinEnabledPending;
         }
 
         return nextPendingChanges;

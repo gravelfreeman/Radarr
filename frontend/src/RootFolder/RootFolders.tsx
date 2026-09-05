@@ -43,8 +43,8 @@ interface RootFoldersProps {
   pendingRecycleBinChanges?: Record<number, boolean>;
   onRecycleBinEnabledChange?: (
     id: number,
-    recycleBinEnabled: boolean,
-    originalRecycleBinEnabled: boolean
+    recycleBinEnabledPending: boolean,
+    recycleBinEnabled: boolean
   ) => void;
 }
 
@@ -79,8 +79,8 @@ function RootFolders(props: RootFoldersProps) {
               key={rootFolder.id}
               id={rootFolder.id}
               path={rootFolder.path}
-              originalRecycleBinEnabled={rootFolder.recycleBinEnabled}
-              recycleBinEnabled={
+              recycleBinEnabled={rootFolder.recycleBinEnabled}
+              recycleBinEnabledPending={
                 pendingRecycleBinChanges[rootFolder.id] ??
                 rootFolder.recycleBinEnabled
               }
