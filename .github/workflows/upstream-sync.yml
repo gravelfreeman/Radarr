@@ -1,5 +1,4 @@
 name: Upstream Sync
-
 on:
   schedule:
     - cron: '17 */6 * * *'
@@ -24,15 +23,12 @@ on:
         description: Optional upstream tag override
         required: false
         type: string
-
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   sync:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -40,7 +36,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.base_branch || 'main' }}
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
-
       - name: Resolve workflow config
         id: config
         env:
@@ -51,7 +46,6 @@ jobs:
           echo "base_branch=${INPUT_BASE_BRANCH:-main}" >> "${GITHUB_OUTPUT}"
           echo "fork_suffix=${INPUT_FORK_SUFFIX:-auto}" >> "${GITHUB_OUTPUT}"
           echo "upstream_repository=${INPUT_UPSTREAM_REPOSITORY:-Radarr/Radarr}" >> "${GITHUB_OUTPUT}"
-
       - name: Run upstream sync
         env:
           BASE_BRANCH: ${{ steps.config.outputs.base_branch }}

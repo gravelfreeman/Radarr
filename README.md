@@ -1,170 +1,59 @@
-# Radarr fork - top-level shared recycle bin
+# Radarr Fork: Per-Root-Folder Shared Recycle Bin
 
-This fork changes Radarr's recycle bin behavior.
+This fork adds a shared recycle bin that each *Radarr* root folder can enable independently. Deleted or replaced media files are moved to a `.bin` folder on the same filesystem. The fork stays automatically synchronized with Radarr upstream, within a few hours; except failed tests require manual intervention.
 
-Fork goals:
+## Changes
 
-- remove the configurable global recycle bin path
-- keep a global enable toggle
-- add a global mode to choose whether the bin applies to upgrades, deletes, or both
-- add a per-root-folder toggle in `Settings > Media Management`
-- when the recycle bin is enabled, move deleted files into `.bin` under the top-level folder while preserving the original path below it
+| Before | After |
+| --- | --- |
+| A configurable global recycle-bin path | A shared `.bin` folder under each top-level folder |
+| One global setting | A global switch plus a switch for each root folder |
+| One fixed behavior | A global mode for upgrades, deletes, or both |
 
-Example:
+## Example
 
-- Radarr root folders:
-  - `/media/library/movies/anime`
-  - `/media/library/movies/comedy`
-  - `/requests/library/movies`
-- if a movie is deleted from `/media/library/movies/anime/Movie/file.mkv`
-- then it is moved to `/media/.bin/library/movies/anime/Movie/file.mkv`
-- if a movie is deleted from `/requests/library/movies/Movie/file.mkv`
-- then it is moved to `/requests/.bin/library/movies/Movie/file.mkv`
+Given these Radarr root folders:
 
-The per-root-folder toggle still controls whether a given library uses the recycle bin. The destination is shared at the first path segment, such as `/media/.bin` or `/requests/.bin`.
+- `/media/library/movies/anime`
+- `/media/library/movies/kids`
+- `/requests/library/movies`
 
-## Change Summary
+A deleted file is moved as follows:
 
-Before:
+| Original file | Recycle-bin destination |
+| --- | --- |
+| `/media/library/movies/anime/Movie/file.mkv` | `/media/.bin/library/movies/anime/Movie/file.mkv` |
+| `/media/library/movies/kids/Movie/file.mkv` | `/media/.bin/library/movies/kids/Movie/file.mkv` |
+| `/requests/library/movies/Movie/file.mkv` | `/requests/.bin/library/movies/Movie/file.mkv` |
 
-- `RecycleBin` was a global path configured in settings
+The path below the top-level folder is preserved.
 
-After:
+## Behavior
 
-- global `RecycleBinEnabled` enables or disables the feature
-- global `RecycleBinMode` chooses whether the bin applies to `Both`, `Upgrades Only`, or `Deletes Only`
-- each `RootFolder` also has its own `RecycleBinEnabled`
-- the bin is used only when the global toggle, global mode, and root folder toggle allow the current operation
-- the destination is computed automatically from the source path's top-level folder
-- the final destination is `<top-level-folder>/.bin/<original-path-relative-to-top-level-folder>`
+The recycle bin is used only when all applicable settings allow the operation:
 
-Behavior rules:
+| Global switch | Root-folder switch | Mode | Result |
+| --- | --- | --- | --- |
+| Off | Any | Any | Permanent delete |
+| On | Off | Any | Permanent delete |
+| On | On | `Both` | Upgrades and deletes go to `.bin` |
+| On | On | `UpgradesOnly` | Only upgrades go to `.bin` |
+| On | On | `DeletesOnly` | Only deletes go to `.bin` |
 
-- `global = false` -> permanent delete, without changing per-root-folder states
-- `global = true` + `root folder = false` -> permanent delete
-- `global = true` + `root folder = true` + `mode = both` -> upgrades + deletes go to `.bin`
-- `global = true` + `root folder = true` + `mode = upgradesOnly` -> only upgrades go to `.bin`
-- `global = true` + `root folder = true` + `mode = deletesOnly` -> only deletes go to `.bin`
+## Defaults
 
-Defaults:
+- On a new installation, the recycle-bin is disabled by default;
+- During migration, a non-empty legacy recycle-bin path enables the new global switch.
+- The default recycle bin mode is `Both`.
+- New root folders have the recycle bin enabled by default.
+- Automatic cleanup is set to 7 days by default.
 
-- new root folders: `RecycleBinEnabled = true`
-- DB column added to `RootFolders` with default `true`
+## Scope and support
 
-## Build
+This is a personal Radarr fork. I build only the Docker image. Native releases are not provided, but the code remains intended to work on Radarr's other supported platforms and architectures. Feel free to build those versions yourself.
 
-Backend:
+## Contributions
 
-```bash
-dotnet build src/Radarr.sln -c Debug --no-restore
-```
+Only PRs directly related to this fork's purpose will be considered. Unrelated changes should be submitted upstream.
 
-Frontend:
-
-```bash
-yarn build
-```
-
-## Workflows GitHub
-
-Le repo contient maintenant une base CI/CD versionnée :
-
-- `.github/workflows/ci.yml` : build backend/frontend + tests ciblés du fork
-- `.github/workflows/upstream-sync.yml` : détecte une nouvelle release upstream, crée une PR de sync et active l'auto-merge si tout est clean
-- `.github/workflows/docker-publish.yml` : build l'image et la push sur GHCR après push sur `develop`
-
-Convention de version image :
-
-- upstream `v6.2.1.10461`
-- image fork `6.2.1.10461-bin1`
-
-Tags publiés :
-
-- `ghcr.io/<owner>/radarr:6.2.1.10461-bin1`
-- `ghcr.io/<owner>/radarr:latest`
-- `ghcr.io/<owner>/radarr:latest-bin1`
-
-## Tests
-
-Targeted recycle bin patch tests:
-
-```bash
-dotnet test src/NzbDrone.Core.Test/Radarr.Core.Test.csproj -c Debug --filter "FullyQualifiedName~RecycleBinProviderTests|FullyQualifiedName~UpgradeMediaFileServiceFixture|FullyQualifiedName~DeleteMovieFileFixture|FullyQualifiedName~RecycleBinFilesystemSmokeFixture" -p:RunAnalyzers=false
-```
-
-Real filesystem smoke test:
-
-```bash
-dotnet test src/NzbDrone.Core.Test/Radarr.Core.Test.csproj -c Debug --filter "FullyQualifiedName~RecycleBinFilesystemSmokeFixture" -p:RunAnalyzers=false
-```
-
-This smoke test creates a temporary library, a fake video file, and verifies:
-
-- direct deletion through `RecycleBinProvider`
-- manual deletion through `MediaFileDeletionService`
-- file upgrade handling
-- negative cases when the mode blocks the operation
-- the actual move to `.bin`
-
-## Local Run
-
-Run Radarr locally:
-
-```bash
-./_output/net8.0/Radarr --nobrowser
-```
-
-Default port:
-
-- `7878`
-
-## Modified Files - UI
-
-| File | Reason |
-|---|---|
-| [frontend/src/Settings/MediaManagement/MediaManagement.tsx](/workspaces/Radarr/frontend/src/Settings/MediaManagement/MediaManagement.tsx) | Keep the global toggle and add the `Use Recycling Bin For` select in media management |
-| [frontend/src/typings/Settings/MediaManagement.ts](/workspaces/Radarr/frontend/src/typings/Settings/MediaManagement.ts) | Align the frontend type with global `RecycleBinEnabled` and `RecycleBinMode` |
-| [frontend/src/RootFolder/RootFolders.tsx](/workspaces/Radarr/frontend/src/RootFolder/RootFolders.tsx) | Add the recycle bin column in `Settings > Media Management > Root Folders` |
-| [frontend/src/RootFolder/RootFolderRow.tsx](/workspaces/Radarr/frontend/src/RootFolder/RootFolderRow.tsx) | Add the per-root-folder toggle and update API call |
-| [frontend/src/RootFolder/RootFolderRow.css](/workspaces/Radarr/frontend/src/RootFolder/RootFolderRow.css) | Adjust the width and display of the new column |
-| [frontend/src/RootFolder/RootFolderRow.css.d.ts](/workspaces/Radarr/frontend/src/RootFolder/RootFolderRow.css.d.ts) | Update CSS module typings for the new class |
-| [frontend/src/Store/Actions/rootFolderActions.js](/workspaces/Radarr/frontend/src/Store/Actions/rootFolderActions.js) | Add `PUT /rootFolder/{id}` update support to persist the toggle |
-| [frontend/src/typings/RootFolder.ts](/workspaces/Radarr/frontend/src/typings/RootFolder.ts) | Add `recycleBinEnabled` to the frontend root folder model |
-
-## Modified Files - Logic / Config / API
-
-| File | Reason |
-|---|---|
-| [src/NzbDrone.Core/Configuration/IConfigService.cs](/workspaces/Radarr/src/NzbDrone.Core/Configuration/IConfigService.cs) | Expose `RecycleBinEnabled` and `RecycleBinMode` in the config contract |
-| [src/NzbDrone.Core/Configuration/ConfigService.cs](/workspaces/Radarr/src/NzbDrone.Core/Configuration/ConfigService.cs) | Implement global `RecycleBinMode` in addition to the master switch |
-| [src/Radarr.Api.V3/Config/MediaManagementConfigResource.cs](/workspaces/Radarr/src/Radarr.Api.V3/Config/MediaManagementConfigResource.cs) | Expose the global toggle and global mode through the API |
-| [src/Radarr.Api.V3/Config/MediaManagementConfigController.cs](/workspaces/Radarr/src/Radarr.Api.V3/Config/MediaManagementConfigController.cs) | Keep global config handling in the media management controller |
-| [src/NzbDrone.Core/RootFolders/RootFolder.cs](/workspaces/Radarr/src/NzbDrone.Core/RootFolders/RootFolder.cs) | Add `RecycleBinEnabled` to the root folder model |
-| [src/NzbDrone.Core/Datastore/Migration/243_add_recycle_bin_to_root_folders.cs](/workspaces/Radarr/src/NzbDrone.Core/Datastore/Migration/243_add_recycle_bin_to_root_folders.cs) | Add the persistent `RecycleBinEnabled` DB column on `RootFolders` |
-| [src/NzbDrone.Core/RootFolders/RootFolderService.cs](/workspaces/Radarr/src/NzbDrone.Core/RootFolders/RootFolderService.cs) | Add root folder update support and full root folder resolution |
-| [src/Radarr.Api.V3/RootFolders/RootFolderResource.cs](/workspaces/Radarr/src/Radarr.Api.V3/RootFolders/RootFolderResource.cs) | Expose `RecycleBinEnabled` through the root folder API |
-| [src/Radarr.Api.V3/RootFolders/RootFolderController.cs](/workspaces/Radarr/src/Radarr.Api.V3/RootFolders/RootFolderController.cs) | Add root folder `PUT` support to change the toggle without touching the path |
-| [src/NzbDrone.Core/MediaFiles/RecycleBinMode.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinMode.cs) | Define the global `Both / UpgradesOnly / DeletesOnly` mode |
-| [src/NzbDrone.Core/MediaFiles/RecycleBinOperation.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinOperation.cs) | Explicitly distinguish `Delete` and `Upgrade` operations |
-| [src/NzbDrone.Core/MediaFiles/RecycleBinPathBuilder.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinPathBuilder.cs) | Compute shared top-level `.bin` paths and preserved relative destinations |
-| [src/NzbDrone.Core/MediaFiles/RecycleBinProvider.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/RecycleBinProvider.cs) | Apply the `global && mode && rootFolder` rule and handle delete/empty/cleanup |
-| [src/NzbDrone.Core/RootFolders/RootFolderService.cs](/workspaces/Radarr/src/NzbDrone.Core/RootFolders/RootFolderService.cs) | Exclude `.bin` from unmapped folders |
-| [src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs](/workspaces/Radarr/src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs) | Block paths pointing to `.bin` or one of its subfolders |
-| [src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs](/workspaces/Radarr/src/NzbDrone.Core/HealthCheck/Checks/RecyclingBinCheck.cs) | Check write access to each shared top-level `.bin` only for enabled root folders |
-| [src/NzbDrone.Core/Localization/Core/en.json](/workspaces/Radarr/src/NzbDrone.Core/Localization/Core/en.json) | Add labels/help text for the global mode |
-| [src/NzbDrone.Core/MediaFiles/UpgradeMediaFileService.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/UpgradeMediaFileService.cs) | Explicitly mark the operation as `Upgrade` |
-| [src/NzbDrone.Core/MediaFiles/MediaFileDeletionService.cs](/workspaces/Radarr/src/NzbDrone.Core/MediaFiles/MediaFileDeletionService.cs) | Explicitly mark deletions as `Delete` |
-
-## Modified Files - Tests
-
-| File | Reason |
-|---|---|
-| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteFileFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteFileFixture.cs) | Cover global on/off, root folder on/off, and all modes for file deletion |
-| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteDirectoryFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/DeleteDirectoryFixture.cs) | Cover global on/off, root folder on/off, and all modes for directory deletion |
-| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/EmptyFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/EmptyFixture.cs) | Verify that `Empty()` ignores disabled root folders |
-| [src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/CleanupFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/ProviderTests/RecycleBinProviderTests/CleanupFixture.cs) | Verify that `Cleanup()` ignores disabled root folders |
-| [src/NzbDrone.Core.Test/RootFolderTests/RootFolderServiceFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/RootFolderTests/RootFolderServiceFixture.cs) | Verify the `RecycleBinEnabled = true` default and root folder rules |
-| [src/NzbDrone.Core.Test/RootFolderTests/GetBestRootFolderPathFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/RootFolderTests/GetBestRootFolderPathFixture.cs) | Cover full root folder resolution |
-| [src/NzbDrone.Core.Test/MediaFiles/UpgradeMediaFileServiceFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/MediaFiles/UpgradeMediaFileServiceFixture.cs) | Verify the `Upgrade` operation is passed and cases where no file exists on disk |
-| [src/NzbDrone.Core.Test/MediaFiles/MediaFileDeletionService/DeleteMovieFileFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/MediaFiles/MediaFileDeletionService/DeleteMovieFileFixture.cs) | Verify the `Delete` operation is passed for file deletion and directory deletion |
-| [src/NzbDrone.Core.Test/MediaFiles/RecycleBinFilesystemSmokeFixture.cs](/workspaces/Radarr/src/NzbDrone.Core.Test/MediaFiles/RecycleBinFilesystemSmokeFixture.cs) | Real disk smoke tests for direct deletion, manual deletion, upgrade, and negative cases by mode |
+Please discuss any proposed feature expansion before implementation begins. Bug fixes and maintenance changes must remain consistent with Radarr upstream's code, structure, and established mechanisms.

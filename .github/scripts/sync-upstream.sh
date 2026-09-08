@@ -109,70 +109,6 @@ if [[ -n "${existing_pr}" ]]; then
   exit 0
 fi
 
-create_auto_pr()
-{
-  local pr_body
-  pr_body=$(cat <<EOF
-Automated upstream sync for \`${latest_upstream_tag}\`.
-
-- upstream repository: \`${upstream_repository}\`
-- base branch: \`${base_branch}\`
-- image suffix: \`${fork_suffix}\`
-
-This PR was created automatically because the merge completed without conflicts.
-If CI is green, auto-merge is enabled.
-EOF
-)
-
-  local pr_url
-  pr_url="$(
-    create_pr \
-      "${base_branch}" \
-      "${sync_branch}" \
-      "${auto_title}" \
-      "${pr_body}"
-  )"
-
-  gh pr merge "${pr_url}" --auto --merge || true
-}
-
-create_manual_pr()
-{
-  local conflict_files="${1:-Unable to resolve conflict file list}"
-  local pr_body
-  pr_body=$(cat <<EOF
-Automated upstream sync for \`${latest_upstream_tag}\` could not be merged cleanly.
-
-- upstream repository: \`${upstream_repository}\`
-- base branch: \`${base_branch}\`
-- image suffix: \`${fork_suffix}\`
-
-Manual merge work is required.
-
-Conflicting files detected during the automated merge attempt:
-
-\`\`\`
-${conflict_files:-Unable to resolve conflict file list}
-\`\`\`
-
-Recommended manual flow:
-
-1. fetch \`${latest_upstream_tag}\` from upstream
-2. merge it into \`${base_branch}\`
-3. resolve conflicts
-4. keep the fork-specific recycle bin changes intact
-5. merge this PR only after the real sync branch is ready
-EOF
-)
-
-  create_pr \
-    "${base_branch}" \
-    "${sync_branch}" \
-    "${manual_title}" \
-    "${pr_body}" \
-    true
-}
-
 create_pr()
 {
   local base="${1:?base branch is required}"
@@ -190,6 +126,63 @@ create_pr()
     --raw-field "body=${body}" \
     --field "draft=${draft}" \
     --jq '.html_url'
+}
+
+create_auto_pr()
+{
+  local pr_body
+  pr_body=$(cat <<EOF
+Automated upstream sync for \`${latest_upstream_tag}\`.
+
+- upstream repository: \`${upstream_repository}\`
+- base branch: \`${base_branch}\`
+- fork suffix: \`${fork_suffix}\`
+
+This PR was created automatically because the merge completed without conflicts.
+If CI is green, auto-merge is enabled.
+EOF
+)
+
+  local pr_url
+  pr_url="$(create_pr "${base_branch}" "${sync_branch}" "${auto_title}" "${pr_body}")"
+  gh pr merge "${pr_url}" --auto --merge || true
+}
+
+create_manual_pr()
+{
+  local conflict_files="${1:-Unable to resolve conflict file list}"
+  local pr_body
+  pr_body=$(cat <<EOF
+Automated upstream sync for \`${latest_upstream_tag}\` could not be merged cleanly.
+
+- upstream repository: \`${upstream_repository}\`
+- base branch: \`${base_branch}\`
+- fork suffix: \`${fork_suffix}\`
+
+Manual merge work is required.
+
+Conflicting files detected during the automated merge attempt:
+
+\`\`\`
+${conflict_files:-Unable to resolve conflict file list}
+\`\`\`
+
+Recommended manual flow:
+
+1. fetch \`${latest_upstream_tag}\` from upstream
+2. merge it into \`${base_branch}\`
+3. resolve conflicts
+4. keep the fork-specific Radarr changes intact
+5. merge this PR only after the real sync branch is ready
+EOF
+)
+
+  create_pr \
+    "${base_branch}" \
+    "${sync_branch}" \
+    "${manual_title}" \
+    "${pr_body}" \
+    true
 }
 
 git checkout -B "${sync_branch}" "origin/${base_branch}"
@@ -219,9 +212,7 @@ if git merge --no-ff "refs/tags/${latest_upstream_tag}" -m "${merge_message}"; t
   exit 0
 fi
 
-conflict_files="$(
-  git diff --name-only --diff-filter=U || true
-)"
+conflict_files="$(git diff --name-only --diff-filter=U || true)"
 
 git merge --abort || true
 git checkout -B "${sync_branch}" "origin/${base_branch}"

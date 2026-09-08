@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches:
@@ -10,38 +9,36 @@ on:
       - 'sync/**'
   pull_request:
   workflow_dispatch:
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 20.11.1
           cache: yarn
-
       - name: Restore backend dependencies
         run: dotnet restore src/Radarr.sln
-
       - name: Install frontend dependencies
         run: yarn install --frozen-lockfile --network-timeout 120000
-
       - name: Build backend
         run: dotnet build src/Radarr.sln -c Debug --no-restore -p:RunAnalyzers=false
-
       - name: Build frontend
         run: yarn build
-
+      - name: Run all unit tests
+        run: >
+          dotnet test src/Radarr.sln
+          -c Debug
+          --no-build
+          --filter "Category!=ManualTest&Category!=IntegrationTest&Category!=AutomationTest"
+          -p:RunAnalyzers=false
       - name: Run targeted recycle bin tests
         run: >
           dotnet test src/NzbDrone.Core.Test/Radarr.Core.Test.csproj
@@ -49,3 +46,19 @@ jobs:
           --no-build
           --filter "FullyQualifiedName~RecycleBinProviderTests|FullyQualifiedName~UpgradeMediaFileServiceFixture|FullyQualifiedName~DeleteMovieFileFixture|FullyQualifiedName~RecycleBinFilesystemSmokeFixture"
           -p:RunAnalyzers=false
+      - name: Run Radarr integration tests
+        run: >
+          dotnet test src/NzbDrone.Integration.Test/Radarr.Integration.Test.csproj
+          -c Debug
+          --no-build
+          -p:RunAnalyzers=false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: radarr:ci
