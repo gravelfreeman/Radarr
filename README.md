@@ -2,6 +2,9 @@
 
 This fork adds a shared recycle bin that each *Radarr* root folder can enable independently. Deleted or replaced media files are moved to a `.bin` folder on the same filesystem. The fork stays automatically synchronized with Radarr upstream, within a few hours; except failed tests require manual intervention.
 
+> [!NOTE]
+> An equivalent fork for Sonarr is maintained [here](https://github.com/gravelfreeman/Sonarr).
+
 ## Changes
 
 | Before | After |
