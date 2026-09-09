@@ -1,90 +1,62 @@
-# Radarr
+# Radarr Fork: Per-Root-Folder Shared Recycle Bin
 
-[![Build Status](https://dev.azure.com/Radarr/Radarr/_apis/build/status/Radarr.Radarr?branchName=develop)](https://dev.azure.com/Radarr/Radarr/_build/latest?definitionId=1&branchName=develop)
-[![Translation status](https://translate.servarr.com/widget/servarr/radarr/svg-badge.svg)](https://translate.servarr.com/engage/servarr/?utm_source=widget)
-[![Docker Pulls](https://img.shields.io/docker/pulls/linuxserver/radarr.svg)](https://wiki.servarr.com/radarr/installation/docker)
-![Github Downloads](https://img.shields.io/github/downloads/Radarr/Radarr/total.svg)
-[![Backers on Open Collective](https://opencollective.com/Radarr/backers/badge.svg)](#backers)
-[![Sponsors on Open Collective](https://opencollective.com/Radarr/sponsors/badge.svg)](#sponsors)
-[![Mega Sponsors on Open Collective](https://opencollective.com/Radarr/megasponsors/badge.svg)](#mega-sponsors)
+This fork adds a shared recycle bin that each *Radarr* root folder can enable independently. Deleted or replaced media files are moved to a `.bin` folder on the same filesystem. The fork stays automatically synchronized with Radarr upstream, within a few hours; except failed tests require manual intervention.
 
-Radarr is a movie collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new movies and will interface with clients and indexers to grab, sort, and rename them. It can also be configured to automatically upgrade the quality of existing files in the library when a better quality format becomes available.
-Note that only one type of a given movie is supported. If you want both a 4k version and 1080p version of a given movie you will need multiple instances.
+> [!NOTE]
+> An equivalent fork for Sonarr is maintained [here](https://github.com/gravelfreeman/Sonarr).
 
-## Major Features Include
+## Changes
 
-* Adding new movies with lots of information, such as trailers, ratings, etc.
-* Support for major platforms: Windows, Linux, macOS, Raspberry Pi, etc.
-* Can watch for better quality of the movies you have and do an automatic upgrade. _eg. from DVD to Blu-Ray_
-* Automatic failed download handling will try another release if one fails
-* Manual search so you can pick any release or to see why a release was not downloaded automatically
-* Full integration with SABnzbd and NZBGet
-* Automatically searching for releases as well as RSS Sync
-* Automatically importing downloaded movies
-* Recognizing Special Editions, Director's Cut, etc.
-* Identifying releases with hardcoded subs
-* Identifying releases with AKA movie names
-* SABnzbd, NZBGet, QBittorrent, Deluge, rTorrent, Transmission, uTorrent, and other download clients are supported and integrated
-* Full integration with Kodi and Plex (notifications, library updates)
-* Importing Metadata such as trailers or subtitles
-* Adding metadata such as posters and information for Kodi and others to use
-* Advanced customization for profiles, such that Radarr will always download the copy you want
-* A beautiful UI
+| Before | After |
+| --- | --- |
+| A configurable global recycle-bin path | A shared `.bin` folder under each top-level folder |
+| One global setting | A global switch plus a switch for each root folder |
+| One fixed behavior | A global mode for upgrades, deletes, or both |
 
-## Support
+## Example
 
-[![Wiki](https://img.shields.io/badge/servarr-wiki-181717.svg?maxAge=60)](https://wiki.servarr.com/radarr)
-[![Discord](https://img.shields.io/badge/discord-chat-7289DA.svg?maxAge=60)](https://radarr.video/discord)
+Given these Radarr root folders:
 
-Note: GitHub Issues are for Bugs and Feature Requests Only
+- `/media/library/movies/anime`
+- `/media/library/movies/kids`
+- `/requests/library/movies`
 
-[![GitHub - Bugs and Feature Requests Only](https://img.shields.io/badge/github-issues-red.svg?maxAge=60)](https://github.com/Radarr/Radarr/issues)
+A deleted file is moved as follows:
 
-## Contributors & Developers
+| Original file | Recycle-bin destination |
+| --- | --- |
+| `/media/library/movies/anime/Movie/file.mkv` | `/media/.bin/library/movies/anime/Movie/file.mkv` |
+| `/media/library/movies/kids/Movie/file.mkv` | `/media/.bin/library/movies/kids/Movie/file.mkv` |
+| `/requests/library/movies/Movie/file.mkv` | `/requests/.bin/library/movies/Movie/file.mkv` |
 
-[API Documentation](https://radarr.video/docs/api/)
+The path below the top-level folder is preserved.
 
-This project exists thanks to all the people who contribute.
-- [Contribute (GitHub)](CONTRIBUTING.md)
-- [Contribution (Wiki Article)](https://wiki.servarr.com/radarr/contributing)
+## Behavior
 
-[![Contributors List](https://opencollective.com/Radarr/contributors.svg?width=890&button=false)](https://github.com/Radarr/Radarr/graphs/contributors)
+The recycle bin is used only when all applicable settings allow the operation:
 
-## Backers
+| Global switch | Root-folder switch | Mode | Result |
+| --- | --- | --- | --- |
+| Off | Any | Any | Permanent delete |
+| On | Off | Any | Permanent delete |
+| On | On | `Both` | Upgrades and deletes go to `.bin` |
+| On | On | `UpgradesOnly` | Only upgrades go to `.bin` |
+| On | On | `DeletesOnly` | Only deletes go to `.bin` |
 
-Thank you to all our backers! 🙏 [Become a backer](https://opencollective.com/Radarr#backer)
+## Defaults
 
-[![Backers List](https://opencollective.com/Radarr/backers.svg?width=890)](https://opencollective.com/Radarr#backer)
+- On a new installation, the recycle-bin is disabled by default;
+- During migration, a non-empty legacy recycle-bin path enables the new global switch.
+- The default recycle bin mode is `Both`.
+- New root folders have the recycle bin enabled by default.
+- Automatic cleanup is set to 7 days by default.
 
-## Sponsors
+## Scope and support
 
-Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a sponsor](https://opencollective.com/Radarr#sponsor)
+This is a personal Radarr fork. I build only the Docker image. Native releases are not provided, but the code remains intended to work on Radarr's other supported platforms and architectures. Feel free to build those versions yourself.
 
-[![Sponsors List](https://opencollective.com/Radarr/sponsors.svg?width=890)](https://opencollective.com/Radarr#sponsor)
+## Contributions
 
-## Mega Sponsors
+Only PRs directly related to this fork's purpose will be considered. Unrelated changes should be submitted upstream.
 
-[![Mega Sponsors List](https://opencollective.com/Radarr/tiers/mega-sponsor.svg?width=890)](https://opencollective.com/Radarr#mega-sponsor)
-
-## JetBrains
-
-Thank you to [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.png" alt="JetBrains" width="96">](http://www.jetbrains.com/) for providing us with free licenses to their great tools.
-
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/ReSharper_icon.png" alt="ReSharper" width="32"> ReSharper](http://www.jetbrains.com/resharper/)
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/WebStorm_icon.png" alt="WebStorm" width="32"> WebStorm](http://www.jetbrains.com/webstorm/)
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/Rider_icon.png" alt="Rider" width="32"> Rider](http://www.jetbrains.com/rider/)
-* [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/dotTrace_icon.png" alt="dotTrace" width="32"> dotTrace](http://www.jetbrains.com/dottrace/)
-
-## DigitalOcean
-
-This project is also supported by DigitalOcean
-<p>
-  <a href="https://www.digitalocean.com/">
-    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px">
-  </a>
-</p>
-
-### License
-
-* [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
-* Copyright 2010-2025
+Please discuss any proposed feature expansion before implementation begins. Bug fixes and maintenance changes must remain consistent with Radarr upstream's code, structure, and established mechanisms.
