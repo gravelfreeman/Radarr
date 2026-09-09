@@ -69,11 +69,9 @@ namespace NzbDrone.Core.MediaFiles
             {
                 _logger.Info("Deleting movie file: {0}", fullPath);
 
-                var subfolder = _diskProvider.GetParentFolder(movie.Path).GetRelativePath(_diskProvider.GetParentFolder(fullPath));
-
                 try
                 {
-                    _recycleBinProvider.DeleteFile(fullPath, subfolder);
+                    _recycleBinProvider.DeleteFile(fullPath, RecycleBinOperation.Delete);
                 }
                 catch (Exception e)
                 {
@@ -118,7 +116,7 @@ namespace NzbDrone.Core.MediaFiles
 
                     if (_diskProvider.FolderExists(movie.Path))
                     {
-                        _recycleBinProvider.DeleteFolder(movie.Path);
+                        _recycleBinProvider.DeleteFolder(movie.Path, RecycleBinOperation.Delete);
                     }
                 }
 

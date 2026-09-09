@@ -47,6 +47,7 @@ namespace NzbDrone.Integration.Test
         public IndexerClient Indexers;
         public LogsClient Logs;
         public ClientBase<NamingConfigResource> NamingConfig;
+        public ClientBase<MediaManagementConfigResource> MediaManagementConfig;
         public NotificationClient Notifications;
         public ClientBase<QualityProfileResource> QualityProfiles;
         public ReleaseClient Releases;
@@ -111,6 +112,7 @@ namespace NzbDrone.Integration.Test
             Indexers = new IndexerClient(RestClient, ApiKey);
             Logs = new LogsClient(RestClient, ApiKey);
             NamingConfig = new ClientBase<NamingConfigResource>(RestClient, ApiKey, "config/naming");
+            MediaManagementConfig = new ClientBase<MediaManagementConfigResource>(RestClient, ApiKey, "config/mediamanagement");
             Notifications = new NotificationClient(RestClient, ApiKey);
             QualityProfiles = new ClientBase<QualityProfileResource>(RestClient, ApiKey);
             Releases = new ReleaseClient(RestClient, ApiKey);

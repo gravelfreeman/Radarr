@@ -95,6 +95,27 @@ const fileDateOptions: EnhancedSelectInputValue<string>[] = [
   },
 ];
 
+const recycleBinModeOptions: EnhancedSelectInputValue<string>[] = [
+  {
+    key: 'both',
+    get value() {
+      return translate('Both');
+    },
+  },
+  {
+    key: 'upgradesOnly',
+    get value() {
+      return translate('UpgradesOnly');
+    },
+  },
+  {
+    key: 'deletesOnly',
+    get value() {
+      return translate('DeletesOnly');
+    },
+  },
+];
+
 function MediaManagement() {
   const dispatch = useDispatch();
   const showAdvancedSettings = useShowAdvancedSettings();
@@ -108,6 +129,7 @@ function MediaManagement() {
     isSaving,
     error,
     settings,
+    pendingChanges,
     hasSettings,
     hasPendingChanges,
     validationErrors,
@@ -432,12 +454,28 @@ function MediaManagement() {
                 <FormLabel>{translate('RecyclingBin')}</FormLabel>
 
                 <FormInputGroup
-                  type={inputTypes.PATH}
-                  name="recycleBin"
+                  type={inputTypes.CHECK}
+                  name="recycleBinEnabled"
                   helpText={translate('RecyclingBinHelpText')}
-                  includeFiles={false}
                   onChange={handleInputChange}
-                  {...settings.recycleBin}
+                  {...settings.recycleBinEnabled}
+                />
+              </FormGroup>
+
+              <FormGroup
+                advancedSettings={showAdvancedSettings}
+                isAdvanced={true}
+              >
+                <FormLabel>{translate('UseRecyclingBinFor')}</FormLabel>
+
+                <FormInputGroup
+                  type={inputTypes.SELECT}
+                  name="recycleBinMode"
+                  helpText={translate('UseRecyclingBinForHelpText')}
+                  values={recycleBinModeOptions}
+                  isDisabled={!settings.recycleBinEnabled.value}
+                  onChange={handleInputChange}
+                  {...settings.recycleBinMode}
                 />
               </FormGroup>
 
@@ -519,7 +557,10 @@ function MediaManagement() {
         ) : null}
 
         <FieldSet legend={translate('RootFolders')}>
-          <RootFolders />
+          <RootFolders
+            rootFolderUpdates={pendingChanges.rootFolderUpdates}
+            onInputChange={handleInputChange}
+          />
           <AddRootFolder />
         </FieldSet>
       </PageContentBody>

@@ -1,7 +1,6 @@
 using System.IO;
 using NLog;
 using NzbDrone.Common.Disk;
-using NzbDrone.Common.Extensions;
 using NzbDrone.Core.MediaFiles.MovieImport;
 using NzbDrone.Core.Parser.Model;
 
@@ -52,13 +51,12 @@ namespace NzbDrone.Core.MediaFiles
             if (existingFile != null)
             {
                 var movieFilePath = Path.Combine(localMovie.Movie.Path, existingFile.RelativePath);
-                var subfolder = rootFolder.GetRelativePath(_diskProvider.GetParentFolder(movieFilePath));
                 string recycleBinPath = null;
 
                 if (_diskProvider.FileExists(movieFilePath))
                 {
                     _logger.Debug("Removing existing movie file: {0}", existingFile);
-                    recycleBinPath = _recycleBinProvider.DeleteFile(movieFilePath, subfolder);
+                    recycleBinPath = _recycleBinProvider.DeleteFile(movieFilePath, RecycleBinOperation.Upgrade);
                 }
                 else
                 {

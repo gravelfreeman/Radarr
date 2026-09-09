@@ -50,5 +50,24 @@ namespace NzbDrone.Integration.Test.ApiTests
             var postResponse = RootFolders.InvalidPost(rootFolder);
             postResponse.Should().NotBeNull();
         }
+
+        [Test]
+        public void should_persist_recycle_bin_setting_when_adding_root_folder()
+        {
+            var disabledRootFolder = RootFolders.Post(new RootFolderResource
+            {
+                Path = GetTempDirectory("recycle-bin-disabled"),
+                RecycleBinEnabled = false
+            });
+
+            RootFolders.Get(disabledRootFolder.Id).RecycleBinEnabled.Should().BeFalse();
+
+            var defaultRootFolder = RootFolders.Post(new RootFolderResource
+            {
+                Path = GetTempDirectory("recycle-bin-default")
+            });
+
+            RootFolders.Get(defaultRootFolder.Id).RecycleBinEnabled.Should().BeTrue();
+        }
     }
 }
