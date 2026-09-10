@@ -92,5 +92,18 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFolder(It.IsAny<string>(), true), Times.Never());
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile(It.IsAny<string>()), Times.Never());
         }
+
+        [Test]
+        public void should_continue_cleaning_after_an_unauthorized_file()
+        {
+            WithExpired();
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.DeleteFile("File1.avi"))
+                  .Throws<UnauthorizedAccessException>();
+
+            Assert.DoesNotThrow(() => Mocker.Resolve<RecycleBinProvider>().Cleanup());
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File1.avi"), Times.Once());
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File2.mkv"), Times.Once());
+        }
     }
 }
