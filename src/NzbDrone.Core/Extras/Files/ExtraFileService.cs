@@ -110,10 +110,6 @@ namespace NzbDrone.Core.Extras.Files
             else
             {
                 var movie = _movieService.GetMovie(message.MovieFile.MovieId);
-                var operation = message.Reason == DeleteMediaFileReason.Upgrade
-                    ? RecycleBinOperation.Upgrade
-                    : RecycleBinOperation.Delete;
-
                 foreach (var extra in _repository.GetFilesByMovieFile(movieFile.Id))
                 {
                     var path = Path.Combine(movie.Path, extra.RelativePath);
@@ -121,7 +117,7 @@ namespace NzbDrone.Core.Extras.Files
                     if (_diskProvider.FileExists(path))
                     {
                         // Send to the recycling bin so they can be recovered if necessary
-                        _recycleBinProvider.DeleteFile(path, operation);
+                        _recycleBinProvider.DeleteFile(path, message.Reason);
                     }
                 }
             }

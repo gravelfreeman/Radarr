@@ -71,7 +71,7 @@ namespace NzbDrone.Core.MediaFiles
 
                 try
                 {
-                    _recycleBinProvider.DeleteFile(fullPath, RecycleBinOperation.Delete);
+                    _recycleBinProvider.DeleteFile(fullPath, DeleteMediaFileReason.Manual);
                 }
                 catch (Exception e)
                 {

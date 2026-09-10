@@ -51,19 +51,18 @@ namespace NzbDrone.Core.Test.Extras.Others
                   .Returns(true);
         }
 
-        [TestCase(DeleteMediaFileReason.Upgrade, RecycleBinOperation.Upgrade)]
-        [TestCase(DeleteMediaFileReason.Manual, RecycleBinOperation.Delete)]
-        [TestCase(DeleteMediaFileReason.ManualOverride, RecycleBinOperation.Delete)]
-        [TestCase(DeleteMediaFileReason.MissingFromDisk, RecycleBinOperation.Delete)]
-        public void should_use_the_same_recycle_bin_operation_as_the_movie_file(DeleteMediaFileReason reason,
-                                                                                 RecycleBinOperation operation)
+        [TestCase(DeleteMediaFileReason.Upgrade)]
+        [TestCase(DeleteMediaFileReason.Manual)]
+        [TestCase(DeleteMediaFileReason.ManualOverride)]
+        [TestCase(DeleteMediaFileReason.MissingFromDisk)]
+        public void should_use_the_same_delete_reason_as_the_movie_file(DeleteMediaFileReason reason)
         {
             var path = Path.Combine(_movie.Path, _extraFile.RelativePath);
 
             Subject.HandleAsync(new MovieFileDeletedEvent(_movieFile, reason));
 
             Mocker.GetMock<IRecycleBinProvider>()
-                  .Verify(r => r.DeleteFile(path, operation), Times.Once());
+                  .Verify(r => r.DeleteFile(path, reason), Times.Once());
         }
     }
 }

@@ -17,7 +17,7 @@ namespace NzbDrone.Core.MediaFiles
     public interface IRecycleBinProvider
     {
         void DeleteFolder(string path);
-        string DeleteFile(string path, RecycleBinOperation operation = RecycleBinOperation.Delete);
+        string DeleteFile(string path, DeleteMediaFileReason reason = DeleteMediaFileReason.Manual);
         void Empty();
         void Cleanup();
     }
@@ -47,7 +47,7 @@ namespace NzbDrone.Core.MediaFiles
         {
             _logger.Info("Attempting to send '{0}' to recycling bin", path);
 
-            var rootFolder = GetRecycleBinRootFolder(path, RecycleBinOperation.Delete);
+            var rootFolder = GetRecycleBinRootFolder(path, DeleteMediaFileReason.Manual);
 
             if (rootFolder == null)
             {
@@ -83,11 +83,11 @@ namespace NzbDrone.Core.MediaFiles
             }
         }
 
-        public string DeleteFile(string path, RecycleBinOperation operation = RecycleBinOperation.Delete)
+        public string DeleteFile(string path, DeleteMediaFileReason reason = DeleteMediaFileReason.Manual)
         {
             _logger.Debug("Attempting to send '{0}' to recycling bin", path);
 
-            var rootFolder = GetRecycleBinRootFolder(path, operation);
+            var rootFolder = GetRecycleBinRootFolder(path, reason);
 
             if (rootFolder == null)
             {
@@ -232,7 +232,7 @@ namespace NzbDrone.Core.MediaFiles
             _logger.Debug("Recycling Bin has been cleaned up.");
         }
 
-        private RootFolder GetRecycleBinRootFolder(string path, RecycleBinOperation operation)
+        private RootFolder GetRecycleBinRootFolder(string path, DeleteMediaFileReason reason)
         {
             if (!_configService.RecycleBinEnabled)
             {
@@ -249,8 +249,8 @@ namespace NzbDrone.Core.MediaFiles
             return _configService.RecycleBinMode switch
             {
                 RecycleBinMode.Both => rootFolder,
-                RecycleBinMode.UpgradesOnly => operation == RecycleBinOperation.Upgrade ? rootFolder : null,
-                RecycleBinMode.DeletesOnly => operation == RecycleBinOperation.Delete ? rootFolder : null,
+                RecycleBinMode.UpgradesOnly => reason == DeleteMediaFileReason.Upgrade ? rootFolder : null,
+                RecycleBinMode.DeletesOnly => reason != DeleteMediaFileReason.Upgrade ? rootFolder : null,
                 _ => rootFolder
             };
         }

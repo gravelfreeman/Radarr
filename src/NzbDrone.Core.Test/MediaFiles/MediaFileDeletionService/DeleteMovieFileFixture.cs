@@ -85,7 +85,7 @@ namespace NzbDrone.Core.Test.MediaFiles.MediaFileDeletionService
             Subject.DeleteMovieFile(_movie, _movieFile);
 
             Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_movieFile, DeleteMediaFileReason.Manual), Times.Once());
-            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, RecycleBinOperation.Delete), Times.Never());
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, DeleteMediaFileReason.Manual), Times.Never());
         }
 
         [Test]
@@ -98,7 +98,7 @@ namespace NzbDrone.Core.Test.MediaFiles.MediaFileDeletionService
             Subject.DeleteMovieFile(_movie, _movieFile);
 
             Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_movieFile, DeleteMediaFileReason.Manual), Times.Once());
-            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, RecycleBinOperation.Delete), Times.Never());
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, DeleteMediaFileReason.Manual), Times.Never());
         }
 
         [Test]
@@ -114,7 +114,7 @@ namespace NzbDrone.Core.Test.MediaFiles.MediaFileDeletionService
 
             Subject.DeleteMovieFile(_movie, _movieFile);
 
-            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, RecycleBinOperation.Delete), Times.Once());
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, DeleteMediaFileReason.Manual), Times.Once());
             Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_movieFile, DeleteMediaFileReason.Manual), Times.Once());
         }
 
@@ -130,13 +130,13 @@ namespace NzbDrone.Core.Test.MediaFiles.MediaFileDeletionService
                   .Returns(true);
 
             Mocker.GetMock<IRecycleBinProvider>()
-                  .Setup(s => s.DeleteFile(_movieFile.Path, RecycleBinOperation.Delete))
+                  .Setup(s => s.DeleteFile(_movieFile.Path, DeleteMediaFileReason.Manual))
                   .Throws(new IOException());
 
             Assert.Throws<NzbDroneClientException>(() => Subject.DeleteMovieFile(_movie, _movieFile));
 
             ExceptionVerification.ExpectedErrors(1);
-            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, RecycleBinOperation.Delete), Times.Once());
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(_movieFile.Path, DeleteMediaFileReason.Manual), Times.Once());
             Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_movieFile, DeleteMediaFileReason.Manual), Times.Never());
         }
     }
