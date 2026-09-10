@@ -17,7 +17,6 @@ namespace NzbDrone.Core.MediaFiles
     public interface IRecycleBinProvider
     {
         void DeleteFolder(string path);
-        void DeleteFolder(string path, RecycleBinOperation operation);
         string DeleteFile(string path, RecycleBinOperation operation = RecycleBinOperation.Delete);
         void Empty();
         void Cleanup();
@@ -46,14 +45,9 @@ namespace NzbDrone.Core.MediaFiles
 
         public void DeleteFolder(string path)
         {
-            DeleteFolder(path, RecycleBinOperation.Delete);
-        }
-
-        public void DeleteFolder(string path, RecycleBinOperation operation)
-        {
             _logger.Info("Attempting to send '{0}' to recycling bin", path);
 
-            var rootFolder = GetRecycleBinRootFolder(path, operation);
+            var rootFolder = GetRecycleBinRootFolder(path, RecycleBinOperation.Delete);
 
             if (rootFolder == null)
             {
