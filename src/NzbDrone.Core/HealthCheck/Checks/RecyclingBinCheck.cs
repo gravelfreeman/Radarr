@@ -38,16 +38,30 @@ namespace NzbDrone.Core.HealthCheck.Checks
                 return new HealthCheck(GetType());
             }
 
-            var recycleBins = _rootFolderService.All()
-                                                .Where(r => r.RecycleBinEnabled)
-                                                .Select(r => _diskProvider.GetMount(r.Path)?.RootDirectory)
-                                                .Where(r => r.IsNotNullOrWhiteSpace())
-                                                .Select(RecycleBinPathBuilder.GetRecycleBinPath)
-                                                .Where(r => r.IsNotNullOrWhiteSpace())
-                                                .Distinct(PathEqualityComparer.Instance);
+            var recycleBins = new HashSet<string>(PathEqualityComparer.Instance);
 
-            foreach (var recycleBin in recycleBins)
+            foreach (var rootFolder in _rootFolderService.All().Where(r => r.RecycleBinEnabled))
             {
+                var mount = _diskProvider.GetMount(rootFolder.Path);
+
+                if (mount == null || mount.RootDirectory.IsNullOrWhiteSpace())
+                {
+                    return new HealthCheck(GetType(),
+                        HealthCheckResult.Error,
+                        _localizationService.GetLocalizedString("RecycleBinUnableToDetermineMountHealthCheckMessage", new Dictionary<string, object>
+                        {
+                            { "path", rootFolder.Path }
+                        }),
+                        "#cannot-determine-recycle-bin-mount");
+                }
+
+                var recycleBin = RecycleBinPathBuilder.GetRecycleBinPath(mount.RootDirectory);
+
+                if (!recycleBins.Add(recycleBin))
+                {
+                    continue;
+                }
+
                 var topLevelFolder = Path.GetDirectoryName(recycleBin);
                 var folderToCheck = _diskProvider.FolderExists(recycleBin) ? recycleBin : topLevelFolder;
 

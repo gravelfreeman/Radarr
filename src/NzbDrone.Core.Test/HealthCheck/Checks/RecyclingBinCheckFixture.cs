@@ -61,5 +61,21 @@ namespace NzbDrone.Core.Test.HealthCheck.Checks
             Mocker.GetMock<IDiskProvider>().Verify(v => v.FolderWritable(mountPath), Times.Once());
             Mocker.GetMock<IDiskProvider>().Verify(v => v.FolderWritable(recycleBin), Times.Never());
         }
+
+        [Test]
+        public void should_report_error_when_root_folder_mount_cannot_be_found()
+        {
+            const string rootFolderPath = "/media/library/movies";
+
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(new List<RootFolder>
+            {
+                new RootFolder { Path = rootFolderPath, RecycleBinEnabled = true }
+            });
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(rootFolderPath)).Returns((IMount)null);
+
+            Subject.Check().ShouldBeError();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.FolderWritable(It.IsAny<string>()), Times.Never());
+        }
     }
 }

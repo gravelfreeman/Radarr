@@ -1568,6 +1568,7 @@
   "Recommendation": "Recommendation",
   "Recommended": "Recommended",
   "RecycleBinUnableToWriteHealthCheck": "Unable to write to configured recycling bin folder: {path}. Ensure this path exists and is writable by the user running {appName}",
+  "RecycleBinUnableToDetermineMountHealthCheckMessage": "Unable to determine the mount for the configured recycling bin root folder: {path}. Ensure this path is accessible and mounted",
   "RecyclingBin": "Recycling Bin",
   "RecyclingBinCleanup": "Recycling Bin Cleanup",
   "RecyclingBinCleanupHelpText": "Set to 0 to disable automatic cleanup",
