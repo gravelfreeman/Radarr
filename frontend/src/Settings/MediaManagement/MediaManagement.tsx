@@ -11,11 +11,13 @@ import { EnhancedSelectInputValue } from 'Components/Form/Select/EnhancedSelectI
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import PageContent from 'Components/Page/PageContent';
 import PageContentBody from 'Components/Page/PageContentBody';
+import usePrevious from 'Helpers/Hooks/usePrevious';
 import useShowAdvancedSettings from 'Helpers/Hooks/useShowAdvancedSettings';
 import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import RootFolders from 'RootFolder/RootFolders';
 import SettingsToolbar from 'Settings/SettingsToolbar';
 import { clearPendingChanges } from 'Store/Actions/baseActions';
+import { fetchRootFolders } from 'Store/Actions/rootFolderActions';
 import {
   fetchMediaManagementSettings,
   saveMediaManagementSettings,
@@ -128,6 +130,7 @@ function MediaManagement() {
     isPopulated,
     isSaving,
     error,
+    saveError,
     settings,
     pendingChanges,
     hasSettings,
@@ -135,6 +138,16 @@ function MediaManagement() {
     validationErrors,
     validationWarnings,
   } = useSelector(createSettingsSectionSelector(SECTION));
+  const isSignalRConnected = useSelector(
+    (state: AppState) =>
+      state.app.isConnected &&
+      !state.app.isDisconnected &&
+      !state.app.isReconnecting
+  );
+  const previousIsSaving = usePrevious(isSaving);
+  const previousRootFolderUpdates = usePrevious(
+    pendingChanges.rootFolderUpdates
+  );
 
   const handleSavePress = useCallback(() => {
     dispatch(saveMediaManagementSettings());
@@ -156,6 +169,27 @@ function MediaManagement() {
       dispatch(clearPendingChanges({ section: `settings.${SECTION}` }));
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (
+      !previousIsSaving ||
+      isSaving ||
+      saveError ||
+      !previousRootFolderUpdates?.length ||
+      isSignalRConnected
+    ) {
+      return;
+    }
+
+    dispatch(fetchRootFolders());
+  }, [
+    dispatch,
+    isSaving,
+    isSignalRConnected,
+    previousIsSaving,
+    previousRootFolderUpdates,
+    saveError,
+  ]);
 
   return (
     <PageContent title={translate('MediaManagementSettings')}>

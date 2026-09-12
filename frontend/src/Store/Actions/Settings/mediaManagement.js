@@ -2,19 +2,12 @@ import { createAction } from 'redux-actions';
 import createFetchHandler from 'Store/Actions/Creators/createFetchHandler';
 import createSaveHandler from 'Store/Actions/Creators/createSaveHandler';
 import createSetSettingValueReducer from 'Store/Actions/Creators/Reducers/createSetSettingValueReducer';
-import { fetchRootFolders } from 'Store/Actions/rootFolderActions';
 import { createThunk } from 'Store/thunks';
 
 //
 // Variables
 
 const section = 'settings.mediaManagement';
-
-function refreshRootFoldersAfterSave(data, saveData, dispatch) {
-  if (saveData.rootFolderUpdates?.length) {
-    dispatch(fetchRootFolders());
-  }
-}
 
 //
 // Actions Types
@@ -58,11 +51,7 @@ export default {
 
   actionHandlers: {
     [FETCH_MEDIA_MANAGEMENT_SETTINGS]: createFetchHandler(section, '/config/mediamanagement'),
-    [SAVE_MEDIA_MANAGEMENT_SETTINGS]: createSaveHandler(
-      section,
-      '/config/mediamanagement',
-      refreshRootFoldersAfterSave
-    )
+    [SAVE_MEDIA_MANAGEMENT_SETTINGS]: createSaveHandler(section, '/config/mediamanagement')
   },
 
   //
