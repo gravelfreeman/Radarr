@@ -7,6 +7,7 @@ using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.RootFolders;
 using NzbDrone.Core.Test.Framework;
+using NzbDrone.Test.Common;
 
 namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
 {
@@ -101,6 +102,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
                   .Throws<UnauthorizedAccessException>();
 
             Assert.DoesNotThrow(() => Mocker.Resolve<RecycleBinProvider>().Cleanup());
+            ExceptionVerification.ExpectedErrors(1);
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File1.avi"), Times.Once());
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File2.mkv"), Times.Once());
