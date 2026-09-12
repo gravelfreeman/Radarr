@@ -207,8 +207,7 @@ namespace NzbDrone.Core.RootFolders
 
         public RootFolder GetBestRootFolder(string path)
         {
-            return All().Where(r => r.Path.IsParentPath(path))
-                        .MaxBy(r => r.Path.Length);
+            return GetBestRootFolder(All(), path);
         }
 
         private void GetDetails(RootFolder rootFolder, Dictionary<int, string> moviePaths, bool timeout)
@@ -228,8 +227,7 @@ namespace NzbDrone.Core.RootFolders
         private string GetBestRootFolderPathInternal(string path, List<RootFolder> rootFolders = null)
         {
             var allRootFoldersToConsider = rootFolders ?? All();
-            var possibleRootFolder = allRootFoldersToConsider.Where(r => r.Path.IsParentPath(path))
-                                                             .MaxBy(r => r.Path.Length);
+            var possibleRootFolder = GetBestRootFolder(allRootFoldersToConsider, path);
 
             if (possibleRootFolder == null)
             {
@@ -239,6 +237,12 @@ namespace NzbDrone.Core.RootFolders
             }
 
             return possibleRootFolder.Path.GetCleanPath();
+        }
+
+        private RootFolder GetBestRootFolder(List<RootFolder> rootFolders, string path)
+        {
+            return rootFolders.Where(r => r.Path.IsParentPath(path))
+                              .MaxBy(r => r.Path.Length);
         }
     }
 }
