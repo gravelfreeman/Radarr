@@ -559,6 +559,7 @@ function MediaManagement() {
         <FieldSet legend={translate('RootFolders')}>
           <RootFolders
             rootFolderUpdates={pendingChanges.rootFolderUpdates}
+            errors={settings.rootFolderUpdates.errors}
             onInputChange={handleInputChange}
           />
           <AddRootFolder />
