@@ -25,29 +25,22 @@ namespace NzbDrone.Core.MediaFiles
             }
 
             var fullMountPath = Path.GetFullPath(mountPath);
-            var relativePath = Path.GetRelativePath(fullMountPath, Path.GetFullPath(path));
+            var fullPath = Path.GetFullPath(path);
+            var isMountPath = fullMountPath.PathEquals(fullPath);
 
-            if (relativePath.IsNullOrWhiteSpace() || IsOutsideMount(relativePath))
+            if (!isMountPath && !fullMountPath.IsParentPath(fullPath))
             {
                 return null;
             }
 
             var recyclingBin = GetRecycleBinPath(fullMountPath);
 
-            if (relativePath == ".")
+            if (isMountPath)
             {
                 return recyclingBin;
             }
 
-            return Path.Combine(recyclingBin, relativePath);
-        }
-
-        private static bool IsOutsideMount(string relativePath)
-        {
-            return Path.IsPathRooted(relativePath) ||
-                   relativePath == ".." ||
-                   relativePath.StartsWith(".." + Path.DirectorySeparatorChar) ||
-                   relativePath.StartsWith(".." + Path.AltDirectorySeparatorChar);
+            return Path.Combine(recyclingBin, fullMountPath.GetRelativePath(fullPath));
         }
     }
 }
