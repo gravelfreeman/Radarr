@@ -64,6 +64,7 @@ namespace NzbDrone.Core.Test.RootFolderTests
 
             Mocker.GetMock<IRootFolderRepository>().Verify(c => c.Insert(root), Times.Once());
         }
+
         [Test]
         public void should_throw_if_folder_being_added_doesnt_exist()
         {
