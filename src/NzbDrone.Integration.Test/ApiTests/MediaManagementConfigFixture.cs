@@ -18,8 +18,8 @@ namespace NzbDrone.Integration.Test.ApiTests
             config.RecycleBinEnabled = true;
             config.RootFolderUpdates = new List<RootFolderUpdateResource>
             {
-                new () { Id = first.Id, RecycleBinEnabled = false },
-                new () { Id = second.Id, RecycleBinEnabled = false }
+                new() { Id = first.Id, RecycleBinEnabled = false },
+                new() { Id = second.Id, RecycleBinEnabled = false }
             };
 
             MediaManagementConfig.Put(config);
@@ -37,7 +37,7 @@ namespace NzbDrone.Integration.Test.ApiTests
             config.RecycleBinEnabled = !originalRecycleBinEnabled;
             config.RootFolderUpdates = new List<RootFolderUpdateResource>
             {
-                new () { Id = int.MaxValue, RecycleBinEnabled = true }
+                new() { Id = int.MaxValue, RecycleBinEnabled = true }
             };
 
             MediaManagementConfig.InvalidPut(config);
@@ -52,8 +52,8 @@ namespace NzbDrone.Integration.Test.ApiTests
             var config = MediaManagementConfig.GetSingle();
             config.RootFolderUpdates = new List<RootFolderUpdateResource>
             {
-                new () { Id = rootFolder.Id, RecycleBinEnabled = true },
-                new () { Id = rootFolder.Id, RecycleBinEnabled = false }
+                new() { Id = rootFolder.Id, RecycleBinEnabled = true },
+                new() { Id = rootFolder.Id, RecycleBinEnabled = false }
             };
 
             MediaManagementConfig.InvalidPut(config);
