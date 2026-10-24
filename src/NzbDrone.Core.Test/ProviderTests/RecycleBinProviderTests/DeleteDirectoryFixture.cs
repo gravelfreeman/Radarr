@@ -4,6 +4,7 @@ using NUnit.Framework;
 using NzbDrone.Common.Disk;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.MediaFiles.MovieImport;
 using NzbDrone.Core.RootFolders;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Test.Common;
@@ -40,6 +41,23 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFolder(path, true), Times.Once());
+        }
+
+        [Test]
+        public void should_not_delete_permanently_when_root_folder_is_missing()
+        {
+            Mocker.GetMock<IConfigService>().SetupGet(s => s.RecycleBinEnabled).Returns(true);
+            Mocker.GetMock<IConfigService>().SetupGet(s => s.RecycleBinMode).Returns(RecycleBinMode.Both);
+            Mocker.GetMock<IRootFolderService>()
+                  .Setup(s => s.GetBestRootFolder(It.IsAny<string>()))
+                  .Returns((RootFolder)null);
+
+            var path = @"/media/library/movies/Movie".AsOsAgnostic();
+
+            Assert.Throws<RecycleBinException>(() => Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path));
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFolder(path, true), Times.Never());
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(It.IsAny<string>(), It.IsAny<string>(), TransferMode.Move), Times.Never());
         }
 
         [Test]

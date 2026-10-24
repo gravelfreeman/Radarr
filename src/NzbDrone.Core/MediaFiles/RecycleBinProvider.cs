@@ -248,7 +248,12 @@ namespace NzbDrone.Core.MediaFiles
 
             var rootFolder = _rootFolderService.GetBestRootFolder(path);
 
-            if (rootFolder?.RecycleBinEnabled != true)
+            if (rootFolder == null)
+            {
+                throw new RecycleBinException($"Unable to find a root folder for '{path}' while the recycling bin is enabled");
+            }
+
+            if (!rootFolder.RecycleBinEnabled)
             {
                 return null;
             }
