@@ -109,25 +109,56 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
         }
 
         [Test]
-        public void should_clean_recycle_bins_on_all_mounts()
+        public void should_cleanup_recycle_bins_on_nested_mounts()
         {
-            var otherRecycleBin = RecycleBinPathBuilder.GetRecycleBinPath("/other");
-            var otherMount = new Mock<IMount>();
-            otherMount.SetupGet(s => s.RootDirectory).Returns("/other");
+            var nestedMount = @"/media/library/movies/nested";
+            var nestedRecycleBin = RecycleBinPathBuilder.GetRecycleBinPath(nestedMount);
+            var mount = new Mock<IMount>();
+            mount.SetupGet(s => s.RootDirectory).Returns(nestedMount);
 
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMounts()).Returns(new[]
-            {
-                Mocker.GetMock<IDiskProvider>().Object.GetMount(RootFolder),
-                otherMount.Object
-            }.Where(m => m != null).ToList());
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(otherRecycleBin)).Returns(true);
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectories(otherRecycleBin)).Returns(Array.Empty<string>());
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(otherRecycleBin, true)).Returns(new[] { "OtherFile.mkv" });
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMounts()).Returns(new[] { mount.Object }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(nestedRecycleBin)).Returns(true);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(nestedRecycleBin, true)).Returns(new[] { "NestedFile.mkv" });
             WithExpired();
 
             Mocker.Resolve<RecycleBinProvider>().Cleanup();
 
-            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("OtherFile.mkv"), Times.Once());
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("NestedFile.mkv"), Times.Once());
+        }
+
+        [Test]
+        public void should_not_cleanup_recycle_bins_on_unrelated_mounts()
+        {
+            var unrelatedRecycleBin = RecycleBinPathBuilder.GetRecycleBinPath("/other");
+            var mount = new Mock<IMount>();
+            mount.SetupGet(s => s.RootDirectory).Returns("/other");
+
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMounts()).Returns(new[] { mount.Object }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(unrelatedRecycleBin)).Returns(true);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(unrelatedRecycleBin, true)).Returns(new[] { "UnrelatedFile.mkv" });
+            WithExpired();
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("UnrelatedFile.mkv"), Times.Never());
+        }
+
+        [Test]
+        public void should_not_cleanup_mounted_recycle_bins_when_no_root_folders_are_configured()
+        {
+            var unrelatedRecycleBin = RecycleBinPathBuilder.GetRecycleBinPath("/other");
+            var mount = new Mock<IMount>();
+            mount.SetupGet(s => s.RootDirectory).Returns("/other");
+
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(Array.Empty<RootFolder>().ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMounts()).Returns(new[] { mount.Object }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(unrelatedRecycleBin)).Returns(true);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(unrelatedRecycleBin, true)).Returns(new[] { "UnrelatedFile.mkv" });
+            WithExpired();
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("UnrelatedFile.mkv"), Times.Never());
         }
     }
 }

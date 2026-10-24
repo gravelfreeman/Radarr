@@ -269,12 +269,21 @@ namespace NzbDrone.Core.MediaFiles
 
         private string[] GetRecycleBins()
         {
-            var rootFolderRecycleBins = _rootFolderService.All()
+            var rootFolders = _rootFolderService.All().ToArray();
+            var rootFolderBins = rootFolders
                                      .Select(r => GetRecycleBinDestination(r.Path));
-            var mountedRecycleBins = (_diskProvider.GetMounts() ?? Enumerable.Empty<IMount>())
-                                     .Select(m => RecycleBinPathBuilder.GetRecycleBinPath(m.RootDirectory));
 
-            return rootFolderRecycleBins.Concat(mountedRecycleBins)
+            var rootFolderPaths = rootFolders
+                .Select(r => _diskProvider.GetActualPath(r.Path) ?? r.Path)
+                .ToArray();
+
+            // Include nested mounts beneath configured roots, but not unrelated volumes.
+            var mountedBins = (_diskProvider.GetMounts() ?? Enumerable.Empty<IMount>())
+                .Where(m => rootFolderPaths.Any(path => path.PathEquals(m.RootDirectory) || path.IsParentPath(m.RootDirectory)))
+                .Select(m => RecycleBinPathBuilder.GetRecycleBinPath(m.RootDirectory));
+
+            return rootFolderBins
+                                     .Concat(mountedBins)
                                      .Where(r => r.IsNotNullOrWhiteSpace())
                                      .Distinct(PathEqualityComparer.Instance)
                                      .ToArray();
