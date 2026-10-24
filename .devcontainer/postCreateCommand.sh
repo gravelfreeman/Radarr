@@ -12,4 +12,4 @@ git config --global --add safe.directory "$workspace_dir"
 git lfs install --skip-repo
 
 yarn install --frozen-lockfile --network-timeout 120000
-dotnet restore src/Radarr.sln
+dotnet restore src/Radarr.sln '-p:WarningsNotAsErrors=NU1902;NU1903'

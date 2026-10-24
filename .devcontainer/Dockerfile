@@ -1,5 +1,10 @@
 FROM mcr.microsoft.com/devcontainers/dotnet:1-8.0
 
+RUN install -d -m 0755 -o vscode -g vscode \
+    /home/vscode/.local \
+    /home/vscode/.local/share \
+    /home/vscode/.local/state
+
 ARG CHROME_FOR_TESTING_VERSION=134.0.6998.165
 
 RUN set -eux; \
