@@ -306,7 +306,9 @@ namespace NzbDrone.Core.MediaFiles
 
         private string[] GetRecycleBins()
         {
-            var rootFolders = _rootFolderService.All().ToArray();
+            var rootFolders = _rootFolderService.All()
+                .Where(r => _diskProvider.FolderExists(r.Path))
+                .ToArray();
             var rootFolderBins = rootFolders
                                      .Select(r => GetRecycleBinDestination(r.Path));
 

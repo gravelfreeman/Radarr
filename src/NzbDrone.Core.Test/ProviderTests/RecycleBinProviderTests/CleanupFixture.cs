@@ -49,6 +49,7 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             var mount = new Mock<IMount>();
             mount.SetupGet(s => s.RootDirectory).Returns("/media");
             Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(It.IsAny<string>())).Returns(mount.Object);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(RootFolder)).Returns(true);
             Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(_recycleBin)).Returns(true);
 
             Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectories(_recycleBin))
@@ -186,6 +187,25 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().Cleanup();
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("LinkedFile.mkv"), Times.Once());
+        }
+
+        [Test]
+        public void should_skip_disconnected_root_folders_and_cleanup_available_roots()
+        {
+            const string disconnectedRoot = @"/missing/library";
+            Mocker.GetMock<IRootFolderService>().Setup(s => s.All()).Returns(new[]
+            {
+                new RootFolder { Path = disconnectedRoot, RecycleBinEnabled = true },
+                new RootFolder { Path = RootFolder, RecycleBinEnabled = true }
+            }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(disconnectedRoot)).Returns(false);
+            WithExpired();
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFileAttributes(disconnectedRoot), Times.Never());
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File1.avi"), Times.Once());
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File2.mkv"), Times.Once());
         }
     }
 }
