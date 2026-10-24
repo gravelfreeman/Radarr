@@ -58,6 +58,40 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.GetMock<IRootFolderService>().Verify(v => v.GetBestRootFolder(path), Times.Once());
         }
 
+        [Test]
+        public void should_use_the_mount_of_the_file_for_recycle_bin_destination()
+        {
+            WithRecycleBin();
+
+            var path = @"/media/library/movies/Movie/Movie.avi".AsOsAgnostic();
+            var realPath = @"/other/Movie.avi".AsOsAgnostic();
+            var mount = new Mock<IMount>();
+            mount.SetupGet(s => s.RootDirectory).Returns(@"/other".AsOsAgnostic());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetActualPath(path)).Returns(realPath);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(realPath)).Returns(mount.Object);
+
+            Mocker.Resolve<RecycleBinProvider>().DeleteFile(path);
+
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFile(path, @"/other/.bin/Movie.avi".AsOsAgnostic(), TransferMode.Move, false), Times.Once());
+        }
+
+        [Test]
+        public void should_resolve_root_folder_symlink_before_building_destination()
+        {
+            WithRecycleBin();
+
+            var path = @"/media/movies/Movie.avi".AsOsAgnostic();
+            var realPath = @"/mnt/storage/movies/Movie.avi".AsOsAgnostic();
+            var mount = new Mock<IMount>();
+            mount.SetupGet(s => s.RootDirectory).Returns(@"/mnt/storage".AsOsAgnostic());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetActualPath(path)).Returns(realPath);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(realPath)).Returns(mount.Object);
+
+            Mocker.Resolve<RecycleBinProvider>().DeleteFile(path);
+
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFile(path, @"/mnt/storage/.bin/movies/Movie.avi".AsOsAgnostic(), TransferMode.Move, false), Times.Once());
+        }
+
         [TestCase("/", "/", "/movie.mkv", "/.bin/movie.mkv")]
         [TestCase("/mnt/media/movies", "/mnt/media", "/mnt/media/movies/movie.mkv", "/mnt/media/.bin/movies/movie.mkv")]
         public void should_use_the_mount_point_for_recycle_bin_destination(string rootFolderPath, string mountPath, string path, string destination)

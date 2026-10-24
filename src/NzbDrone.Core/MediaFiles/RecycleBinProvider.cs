@@ -57,7 +57,7 @@ namespace NzbDrone.Core.MediaFiles
             }
             else
             {
-                var destination = RecycleBinPathBuilder.GetRecycleBinDestination(path, GetRecycleBinMountPath(rootFolder.Path));
+                var destination = GetRecycleBinDestination(path);
 
                 if (destination.IsNullOrWhiteSpace())
                 {
@@ -106,7 +106,7 @@ namespace NzbDrone.Core.MediaFiles
             else
             {
                 var fileInfo = new FileInfo(path);
-                var destination = RecycleBinPathBuilder.GetRecycleBinDestination(path, GetRecycleBinMountPath(rootFolder.Path));
+                var destination = GetRecycleBinDestination(path);
 
                 if (destination.IsNullOrWhiteSpace())
                 {
@@ -264,11 +264,21 @@ namespace NzbDrone.Core.MediaFiles
 
         private string[] GetRecycleBins()
         {
-            return _rootFolderService.All()
-                                     .Select(r => RecycleBinPathBuilder.GetRecycleBinDestination(r.Path, GetRecycleBinMountPath(r.Path)))
+            var rootFolderRecycleBins = _rootFolderService.All()
+                                     .Select(r => GetRecycleBinDestination(r.Path));
+            var mountedRecycleBins = (_diskProvider.GetMounts() ?? Enumerable.Empty<IMount>())
+                                     .Select(m => RecycleBinPathBuilder.GetRecycleBinPath(m.RootDirectory));
+
+            return rootFolderRecycleBins.Concat(mountedRecycleBins)
                                      .Where(r => r.IsNotNullOrWhiteSpace())
                                      .Distinct(PathEqualityComparer.Instance)
                                      .ToArray();
+        }
+
+        private string GetRecycleBinDestination(string path)
+        {
+            var actualPath = _diskProvider.GetActualPath(path) ?? path;
+            return RecycleBinPathBuilder.GetRecycleBinDestination(actualPath, GetRecycleBinMountPath(actualPath));
         }
 
         private string GetRecycleBinMountPath(string path)

@@ -107,5 +107,27 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File1.avi"), Times.Once());
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("File2.mkv"), Times.Once());
         }
+
+        [Test]
+        public void should_clean_recycle_bins_on_all_mounts()
+        {
+            var otherRecycleBin = RecycleBinPathBuilder.GetRecycleBinPath("/other");
+            var otherMount = new Mock<IMount>();
+            otherMount.SetupGet(s => s.RootDirectory).Returns("/other");
+
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMounts()).Returns(new[]
+            {
+                Mocker.GetMock<IDiskProvider>().Object.GetMount(RootFolder),
+                otherMount.Object
+            }.Where(m => m != null).ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(otherRecycleBin)).Returns(true);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectories(otherRecycleBin)).Returns(Array.Empty<string>());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(otherRecycleBin, true)).Returns(new[] { "OtherFile.mkv" });
+            WithExpired();
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("OtherFile.mkv"), Times.Once());
+        }
     }
 }
