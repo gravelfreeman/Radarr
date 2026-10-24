@@ -82,18 +82,31 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             WithRecycleBin();
             var path = @"/media/tv/Serie";
             var directory = new DirectoryInfo(Path.Combine(path, "Season 1"));
+            var recycleBinDirectory = new DirectoryInfo(Path.Combine(path, RecycleBinPathBuilder.RecycleBinFolder));
             var file = new FileInfo(Path.Combine(path, "readme.txt"));
             var mount = new Mock<IMount>();
             mount.SetupGet(s => s.RootDirectory).Returns(path);
             Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(path)).Returns(mount.Object);
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectoryInfos(path)).Returns(new[] { directory }.ToList());
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFileInfos(path)).Returns(new[] { file }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectoryInfos(path)).Returns(new[] { directory, recycleBinDirectory }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFileInfos(path, false)).Returns(new[] { file }.ToList());
             Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(It.IsAny<string>(), true)).Returns(Array.Empty<string>());
+
+            var destination = Path.Combine(path, ".bin", "Serie");
+            var destinationCreated = false;
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.CreateFolder(destination))
+                  .Callback(() => destinationCreated = true);
+            Mocker.GetMock<IDiskTransferService>()
+                  .Setup(s => s.TransferFolder(directory.FullName, Path.Combine(destination, directory.Name), TransferMode.Move))
+                  .Callback(() => Assert.That(destinationCreated, Is.True));
+            Mocker.GetMock<IDiskTransferService>()
+                  .Setup(s => s.TransferFile(file.FullName, Path.Combine(destination, file.Name), TransferMode.Move, false))
+                  .Callback(() => Assert.That(destinationCreated, Is.True));
 
             Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
 
-            var destination = Path.Combine(path, ".bin", "Serie");
+            Mocker.GetMock<IDiskProvider>().Verify(s => s.CreateFolder(destination), Times.Once());
             Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(directory.FullName, Path.Combine(destination, directory.Name), TransferMode.Move), Times.Once());
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(recycleBinDirectory.FullName, It.IsAny<string>(), TransferMode.Move), Times.Never());
             Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFile(file.FullName, Path.Combine(destination, file.Name), TransferMode.Move, false), Times.Once());
             Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(path, It.IsAny<string>(), TransferMode.Move), Times.Never());
         }

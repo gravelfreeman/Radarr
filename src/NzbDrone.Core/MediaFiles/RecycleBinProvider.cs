@@ -86,12 +86,19 @@ namespace NzbDrone.Core.MediaFiles
                 if (isMountRoot)
                 {
                     // A mount root cannot be moved into its own .bin, so move its immediate contents instead.
-                    foreach (var directory in _diskProvider.GetDirectoryInfos(path))
+                    var directories = _diskProvider.GetDirectoryInfos(path)
+                        .Where(d => !string.Equals(d.Name, RecycleBinPathBuilder.RecycleBinFolder, StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                    var files = _diskProvider.GetFileInfos(path).ToArray();
+
+                    _diskProvider.CreateFolder(destination);
+
+                    foreach (var directory in directories)
                     {
                         _diskTransferService.TransferFolder(directory.FullName, Path.Combine(destination, directory.Name), TransferMode.Move);
                     }
 
-                    foreach (var file in _diskProvider.GetFileInfos(path))
+                    foreach (var file in files)
                     {
                         _diskTransferService.TransferFile(file.FullName, Path.Combine(destination, file.Name), TransferMode.Move);
                     }
