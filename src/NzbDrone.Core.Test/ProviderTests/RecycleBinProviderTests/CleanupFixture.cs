@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using Moq;
 using NUnit.Framework;
@@ -159,6 +160,32 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.Resolve<RecycleBinProvider>().Cleanup();
 
             Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("UnrelatedFile.mkv"), Times.Never());
+        }
+
+        [Test]
+        public void should_cleanup_recycle_bins_reached_through_symlinks()
+        {
+            var linkedPath = Path.Combine(RootFolder, "external-link");
+            var actualLinkedPath = "/external/library";
+            var externalRecycleBin = RecycleBinPathBuilder.GetRecycleBinPath("/external");
+            var mediaMount = new Mock<IMount>();
+            mediaMount.SetupGet(s => s.RootDirectory).Returns("/media");
+            var externalMount = new Mock<IMount>();
+            externalMount.SetupGet(s => s.RootDirectory).Returns("/external");
+
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectories(RootFolder)).Returns(new[] { linkedPath });
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectories(linkedPath)).Returns(Array.Empty<string>());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFileAttributes(linkedPath)).Returns(FileAttributes.ReparsePoint);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetActualPath(linkedPath)).Returns(actualLinkedPath);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(actualLinkedPath)).Returns(externalMount.Object);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMounts()).Returns(new[] { mediaMount.Object, externalMount.Object }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.FolderExists(externalRecycleBin)).Returns(true);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(externalRecycleBin, true)).Returns(new[] { "LinkedFile.mkv" });
+            WithExpired();
+
+            Mocker.Resolve<RecycleBinProvider>().Cleanup();
+
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.DeleteFile("LinkedFile.mkv"), Times.Once());
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NLog;
@@ -313,9 +314,47 @@ namespace NzbDrone.Core.MediaFiles
                 .Select(r => _diskProvider.GetActualPath(r.Path) ?? r.Path)
                 .ToArray();
 
-            // Include nested mounts beneath configured roots, but not unrelated volumes.
+            var rootPaths = new HashSet<string>(rootFolders.Select(r => r.Path), PathEqualityComparer.Instance);
+            var linkedMountPaths = new HashSet<string>(PathEqualityComparer.Instance);
+            var visitedPaths = new HashSet<string>(PathEqualityComparer.Instance);
+            var pathsToCheck = new Stack<string>(rootPaths);
+
+            while (pathsToCheck.Count > 0)
+            {
+                var path = pathsToCheck.Pop();
+                var isLinkedPath = (_diskProvider.GetFileAttributes(path) & FileAttributes.ReparsePoint) != 0;
+                var actualPath = isLinkedPath ? _diskProvider.GetActualPath(path) ?? path : path;
+
+                if (isLinkedPath)
+                {
+                    var mount = _diskProvider.GetMount(actualPath);
+                    if (mount?.RootDirectory.IsNotNullOrWhiteSpace() == true)
+                    {
+                        linkedMountPaths.Add(mount.RootDirectory);
+                    }
+                }
+
+                // Don't recursively scan an external target tree; only scan through a configured root link.
+                if (isLinkedPath && !rootPaths.Contains(path))
+                {
+                    continue;
+                }
+
+                if (!visitedPaths.Add(actualPath))
+                {
+                    continue;
+                }
+
+                foreach (var directory in _diskProvider.GetDirectories(path))
+                {
+                    pathsToCheck.Push(directory);
+                }
+            }
+
+            // Include nested mounts and mounts reached through links, but not unrelated volumes.
             var mountedBins = (_diskProvider.GetMounts() ?? Enumerable.Empty<IMount>())
-                .Where(m => rootFolderPaths.Any(path => path.PathEquals(m.RootDirectory) || path.IsParentPath(m.RootDirectory)))
+                .Where(m => rootFolderPaths.Any(path => path.PathEquals(m.RootDirectory) || path.IsParentPath(m.RootDirectory)) ||
+                            linkedMountPaths.Any(path => path.PathEquals(m.RootDirectory) || path.IsParentPath(m.RootDirectory)))
                 .Select(m => RecycleBinPathBuilder.GetRecycleBinPath(m.RootDirectory));
 
             return rootFolderBins
