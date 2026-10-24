@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using Moq;
 using NUnit.Framework;
 using NzbDrone.Common.Disk;
@@ -72,6 +74,28 @@ namespace NzbDrone.Core.Test.ProviderTests.RecycleBinProviderTests
             Mocker.GetMock<IDiskTransferService>()
                   .Verify(v => v.TransferFolder(path, RecycleBinPathBuilder.GetRecycleBinDestination(path, "/media"), TransferMode.Move), Times.Once());
             Mocker.GetMock<IRootFolderService>().Verify(v => v.GetBestRootFolder(path), Times.Once());
+        }
+
+        [Test]
+        public void should_move_contents_when_folder_is_a_mount_root()
+        {
+            WithRecycleBin();
+            var path = @"/media/tv/Serie";
+            var directory = new DirectoryInfo(Path.Combine(path, "Season 1"));
+            var file = new FileInfo(Path.Combine(path, "readme.txt"));
+            var mount = new Mock<IMount>();
+            mount.SetupGet(s => s.RootDirectory).Returns(path);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetMount(path)).Returns(mount.Object);
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetDirectoryInfos(path)).Returns(new[] { directory }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFileInfos(path)).Returns(new[] { file }.ToList());
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(It.IsAny<string>(), true)).Returns(Array.Empty<string>());
+
+            Mocker.Resolve<RecycleBinProvider>().DeleteFolder(path);
+
+            var destination = Path.Combine(path, ".bin", "Serie");
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(directory.FullName, Path.Combine(destination, directory.Name), TransferMode.Move), Times.Once());
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFile(file.FullName, Path.Combine(destination, file.Name), TransferMode.Move, false), Times.Once());
+            Mocker.GetMock<IDiskTransferService>().Verify(v => v.TransferFolder(path, It.IsAny<string>(), TransferMode.Move), Times.Never());
         }
 
         [Test]

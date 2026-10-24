@@ -64,13 +64,42 @@ namespace NzbDrone.Core.MediaFiles
                     throw new RecycleBinException($"Unable to determine the recycling bin destination for folder '{path}'");
                 }
 
+                var actualPath = _diskProvider.GetActualPath(path) ?? path;
+                var mount = _diskProvider.GetMount(actualPath);
+                var isMountRoot = mount != null && mount.RootDirectory.PathEquals(actualPath);
+
+                if (isMountRoot)
+                {
+                    var mountName = new DirectoryInfo(actualPath).Name;
+                    if (mountName.IsNotNullOrWhiteSpace())
+                    {
+                        destination = Path.Combine(destination, mountName);
+                    }
+                }
+
                 var destinationParent = new DirectoryInfo(destination).Parent.FullName;
 
                 _logger.Debug("Creating folder {0}", destinationParent);
                 _diskProvider.CreateFolder(destinationParent);
 
                 _logger.Debug("Moving '{0}' to '{1}'", path, destination);
-                _diskTransferService.TransferFolder(path, destination, TransferMode.Move);
+                if (isMountRoot)
+                {
+                    // A mount root cannot be moved into its own .bin, so move its immediate contents instead.
+                    foreach (var directory in _diskProvider.GetDirectoryInfos(path))
+                    {
+                        _diskTransferService.TransferFolder(directory.FullName, Path.Combine(destination, directory.Name), TransferMode.Move);
+                    }
+
+                    foreach (var file in _diskProvider.GetFileInfos(path))
+                    {
+                        _diskTransferService.TransferFile(file.FullName, Path.Combine(destination, file.Name), TransferMode.Move);
+                    }
+                }
+                else
+                {
+                    _diskTransferService.TransferFolder(path, destination, TransferMode.Move);
+                }
 
                 _logger.Debug("Setting last accessed: {0}", path);
                 _diskProvider.FolderSetLastWriteTime(destination, DateTime.UtcNow);
