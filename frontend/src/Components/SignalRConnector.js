@@ -318,8 +318,16 @@ class SignalRConnector extends Component {
     this.props.dispatchFetchCommands();
   };
 
-  handleRootfolder = () => {
-    this.props.dispatchFetchRootFolders();
+  handleRootfolder = ({ action, resource }) => {
+    if (action === 'updated') {
+      this.props.dispatchUpdateItem({
+        section: 'rootFolders',
+        updateOnly: true,
+        ...resource
+      });
+    } else {
+      this.props.dispatchFetchRootFolders();
+    }
   };
 
   handleTag = (body) => {
