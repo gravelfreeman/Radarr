@@ -33,9 +33,12 @@ namespace NzbDrone.Mono.Disk
 
         public override IMount GetMount(string path)
         {
-            path = _symLinkResolver.GetCompleteRealPath(path);
+            return base.GetMount(GetActualPath(path));
+        }
 
-            return base.GetMount(path);
+        public override string GetActualPath(string path)
+        {
+            return _symLinkResolver.GetCompleteRealPath(path);
         }
 
         public override long? GetAvailableSpace(string path)
