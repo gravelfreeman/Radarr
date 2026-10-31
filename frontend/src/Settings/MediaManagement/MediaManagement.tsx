@@ -11,11 +11,13 @@ import { EnhancedSelectInputValue } from 'Components/Form/Select/EnhancedSelectI
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import PageContent from 'Components/Page/PageContent';
 import PageContentBody from 'Components/Page/PageContentBody';
+import usePrevious from 'Helpers/Hooks/usePrevious';
 import useShowAdvancedSettings from 'Helpers/Hooks/useShowAdvancedSettings';
 import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import RootFolders from 'RootFolder/RootFolders';
 import SettingsToolbar from 'Settings/SettingsToolbar';
 import { clearPendingChanges } from 'Store/Actions/baseActions';
+import { fetchRootFolders } from 'Store/Actions/rootFolderActions';
 import {
   fetchMediaManagementSettings,
   saveMediaManagementSettings,
@@ -95,6 +97,27 @@ const fileDateOptions: EnhancedSelectInputValue<string>[] = [
   },
 ];
 
+const recycleBinModeOptions: EnhancedSelectInputValue<string>[] = [
+  {
+    key: 'both',
+    get value() {
+      return translate('Both');
+    },
+  },
+  {
+    key: 'upgradesOnly',
+    get value() {
+      return translate('UpgradesOnly');
+    },
+  },
+  {
+    key: 'deletesOnly',
+    get value() {
+      return translate('DeletesOnly');
+    },
+  },
+];
+
 function MediaManagement() {
   const dispatch = useDispatch();
   const showAdvancedSettings = useShowAdvancedSettings();
@@ -107,12 +130,24 @@ function MediaManagement() {
     isPopulated,
     isSaving,
     error,
+    saveError,
     settings,
+    pendingChanges,
     hasSettings,
     hasPendingChanges,
     validationErrors,
     validationWarnings,
   } = useSelector(createSettingsSectionSelector(SECTION));
+  const isSignalRConnected = useSelector(
+    (state: AppState) =>
+      state.app.isConnected &&
+      !state.app.isDisconnected &&
+      !state.app.isReconnecting
+  );
+  const previousIsSaving = usePrevious(isSaving);
+  const previousRootFolderUpdates = usePrevious(
+    pendingChanges.rootFolderUpdates
+  );
 
   const handleSavePress = useCallback(() => {
     dispatch(saveMediaManagementSettings());
@@ -134,6 +169,27 @@ function MediaManagement() {
       dispatch(clearPendingChanges({ section: `settings.${SECTION}` }));
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (
+      !previousIsSaving ||
+      isSaving ||
+      saveError ||
+      !previousRootFolderUpdates?.length ||
+      isSignalRConnected
+    ) {
+      return;
+    }
+
+    dispatch(fetchRootFolders());
+  }, [
+    dispatch,
+    isSaving,
+    isSignalRConnected,
+    previousIsSaving,
+    previousRootFolderUpdates,
+    saveError,
+  ]);
 
   return (
     <PageContent title={translate('MediaManagementSettings')}>
@@ -432,12 +488,28 @@ function MediaManagement() {
                 <FormLabel>{translate('RecyclingBin')}</FormLabel>
 
                 <FormInputGroup
-                  type={inputTypes.PATH}
-                  name="recycleBin"
+                  type={inputTypes.CHECK}
+                  name="recycleBinEnabled"
                   helpText={translate('RecyclingBinHelpText')}
-                  includeFiles={false}
                   onChange={handleInputChange}
-                  {...settings.recycleBin}
+                  {...settings.recycleBinEnabled}
+                />
+              </FormGroup>
+
+              <FormGroup
+                advancedSettings={showAdvancedSettings}
+                isAdvanced={true}
+              >
+                <FormLabel>{translate('UseRecyclingBinFor')}</FormLabel>
+
+                <FormInputGroup
+                  type={inputTypes.SELECT}
+                  name="recycleBinMode"
+                  helpText={translate('UseRecyclingBinForHelpText')}
+                  values={recycleBinModeOptions}
+                  isDisabled={!settings.recycleBinEnabled.value}
+                  onChange={handleInputChange}
+                  {...settings.recycleBinMode}
                 />
               </FormGroup>
 
@@ -519,7 +591,11 @@ function MediaManagement() {
         ) : null}
 
         <FieldSet legend={translate('RootFolders')}>
-          <RootFolders />
+          <RootFolders
+            rootFolderUpdates={pendingChanges.rootFolderUpdates}
+            errors={settings.rootFolderUpdates?.errors}
+            onInputChange={handleInputChange}
+          />
           <AddRootFolder />
         </FieldSet>
       </PageContentBody>
