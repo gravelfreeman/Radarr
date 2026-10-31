@@ -2,18 +2,46 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/dotnet
 {
   "name": "Radarr",
-  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.1password,target=/home/vscode/.1password,type=bind",
+    "source=/run/user,target=/run/host-runtime,type=bind,readonly",
+    "source=/usr/bin/op,target=/usr/bin/op,type=bind,readonly",
+    "source=${localEnv:HOME}/.gitconfig,target=/tmp/host.gitconfig,type=bind,readonly",
+    "source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode,type=bind,readonly",
+    "source=/usr/bin/opencode,target=/usr/bin/opencode,type=bind,readonly",
+    "source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode,type=bind",
+    "source=${localEnv:HOME}/.local/state,target=/home/vscode/.local/state,type=bind",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind"
+  ],
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/home/vscode/.1password/agent.sock",
+    "SHELL": "/bin/zsh",
+    "XDG_RUNTIME_DIR": "/run/user/1000",
+    "OP_BIOMETRIC_UNLOCK_ENABLED": "true",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_NOLOGO": "1",
+    "NUGET_XMLDOC_MODE": "skip"
+  },
+  "runArgs": [
+    "--tmpfs=/run/user/1000:uid=1000,gid=1000,mode=700"
+  ],
+  "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/onCreateCommand.sh ${containerWorkspaceFolder}",
+  "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/postStartCommand.sh",
+  "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/postCreateCommand.sh ${containerWorkspaceFolder}",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/node:2": {
       "nodeGypDependencies": true,
-      "version": "20",
-      "nvmVersion": "latest"
+      "version": "20.11.1"
     }
   },
   "forwardPorts": [7878],
-  "customizations": {
-    "vscode": {
-      "extensions": ["esbenp.prettier-vscode"]
+  "portsAttributes": {
+    "7878": {
+      "label": "Radarr"
     }
   }
 }
