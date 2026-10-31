@@ -4,6 +4,7 @@ interface CssExports {
   'actions': string;
   'freeSpace': string;
   'link': string;
+  'recycleBinEnabled': string;
   'unavailableLabel': string;
   'unavailablePath': string;
   'unmappedFolders': string;
