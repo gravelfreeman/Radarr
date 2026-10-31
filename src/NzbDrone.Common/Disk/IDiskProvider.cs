@@ -42,6 +42,7 @@ namespace NzbDrone.Common.Disk
         void FileSetLastWriteTime(string path, DateTime dateTime);
         bool IsFileLocked(string path);
         string GetPathRoot(string path);
+        string GetActualPath(string path);
         string GetParentFolder(string path);
         FileAttributes GetFileAttributes(string path);
         void EmptyFolder(string path);
