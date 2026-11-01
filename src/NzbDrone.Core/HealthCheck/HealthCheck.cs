@@ -91,6 +91,7 @@ namespace NzbDrone.Core.HealthCheck
         ProxyFailed,
         ProxyResolveIp,
         PTPOldSettings,
+        RecycleBinUnableToDetermineMount,
         RecycleBinUnableToWrite,
         ReleaseBranch,
         RemotePathMappingBadDockerPath,

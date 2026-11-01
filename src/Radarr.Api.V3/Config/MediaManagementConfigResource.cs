@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Qualities;
@@ -8,7 +10,8 @@ namespace Radarr.Api.V3.Config
     public class MediaManagementConfigResource : RestResource
     {
         public bool AutoUnmonitorPreviouslyDownloadedMovies { get; set; }
-        public string RecycleBin { get; set; }
+        public bool RecycleBinEnabled { get; set; }
+        public RecycleBinMode RecycleBinMode { get; set; }
         public int RecycleBinCleanupDays { get; set; }
         public ProperDownloadTypes DownloadPropersAndRepacks { get; set; }
         public bool CreateEmptyMovieFolders { get; set; }
@@ -30,6 +33,14 @@ namespace Radarr.Api.V3.Config
         public bool ImportExtraFiles { get; set; }
         public string ExtraFileExtensions { get; set; }
         public bool EnableMediaInfo { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        public List<RootFolderUpdateResource> RootFolderUpdates { get; set; }
+    }
+
+    public class RootFolderUpdateResource
+    {
+        public int Id { get; set; }
+        public bool RecycleBinEnabled { get; set; }
     }
 
     public static class MediaManagementConfigResourceMapper
@@ -39,7 +50,8 @@ namespace Radarr.Api.V3.Config
             return new MediaManagementConfigResource
             {
                 AutoUnmonitorPreviouslyDownloadedMovies = model.AutoUnmonitorPreviouslyDownloadedMovies,
-                RecycleBin = model.RecycleBin,
+                RecycleBinEnabled = model.RecycleBinEnabled,
+                RecycleBinMode = model.RecycleBinMode,
                 RecycleBinCleanupDays = model.RecycleBinCleanupDays,
                 DownloadPropersAndRepacks = model.DownloadPropersAndRepacks,
                 CreateEmptyMovieFolders = model.CreateEmptyMovieFolders,

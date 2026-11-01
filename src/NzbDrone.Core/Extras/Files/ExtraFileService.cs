@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Disk;
-using NzbDrone.Common.Extensions;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
@@ -111,7 +110,6 @@ namespace NzbDrone.Core.Extras.Files
             else
             {
                 var movie = _movieService.GetMovie(message.MovieFile.MovieId);
-
                 foreach (var extra in _repository.GetFilesByMovieFile(movieFile.Id))
                 {
                     var path = Path.Combine(movie.Path, extra.RelativePath);
@@ -119,8 +117,7 @@ namespace NzbDrone.Core.Extras.Files
                     if (_diskProvider.FileExists(path))
                     {
                         // Send to the recycling bin so they can be recovered if necessary
-                        var subfolder = _diskProvider.GetParentFolder(movie.Path).GetRelativePath(_diskProvider.GetParentFolder(path));
-                        _recycleBinProvider.DeleteFile(path, subfolder);
+                        _recycleBinProvider.DeleteFile(path, message.Reason);
                     }
                 }
             }
