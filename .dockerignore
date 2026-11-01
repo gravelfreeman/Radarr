@@ -1,0 +1,12 @@
+*
+!Dockerfile
+!package.json
+!yarn.lock
+!tsconfig.json
+!.yarnrc
+!frontend
+!frontend/**
+!src
+!src/**
+!Logo
+!Logo/**
