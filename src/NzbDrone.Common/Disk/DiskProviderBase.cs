@@ -410,6 +410,11 @@ namespace NzbDrone.Common.Disk
             return Path.GetPathRoot(path);
         }
 
+        public virtual string GetActualPath(string path)
+        {
+            return path;
+        }
+
         public string GetParentFolder(string path)
         {
             Ensure.That(path, () => path).IsValidPath(PathValidationType.CurrentOs);
